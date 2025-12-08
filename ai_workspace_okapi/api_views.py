@@ -2884,6 +2884,8 @@ def download_pib(request):
     task_data = ser.data
     res_text = task_data['output_file_path']
 
+    target_language_code = obj.job.target_language_code
+
     if output_type == "ORIGINAL" or output_type == 'MTRAW':
         data = obj.pib_task.last().target_json if output_type == 'ORIGINAL' else obj.pib_task.first().tasknewspibdetail.first().mt_raw_json
         heading = data.get("heading", "")
@@ -2899,7 +2901,8 @@ def download_pib(request):
         docx_path = generate_pib_docx(
             heading=heading,
             story=story,
-            base_filename=filename[:50]
+            base_filename=filename[:50],
+            language = target_language_code
         )
 
         # return the file

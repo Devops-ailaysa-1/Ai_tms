@@ -262,11 +262,6 @@ def add_additional_content_to_docx(docx_filename, additional_content):
             doc.add_paragraph(f'{value}')
     doc.save(docx_filename)
 
-from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import Pt
-import tempfile
-import os
 
 # def generate_pib_docx(heading: str, story: str, base_filename: str):
 #     """
@@ -300,26 +295,37 @@ import os
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.style import WD_STYLE_TYPE
 from docx.shared import Pt
 from htmldocx import HtmlToDocx
 import tempfile, os
 
-def generate_pib_docx(heading: str, story: str, base_filename: str):
+def generate_pib_docx(heading: str, story: str, base_filename: str, language=None):
     doc = Document()
+    RTL_LANGS = ["ar", "ur", "fa", "he"]
+    rtl_mode = language in RTL_LANGS
 
+    if rtl_mode:
+        rtl_style = doc.styles.add_style("RTL_Style", WD_STYLE_TYPE.CHARACTER)
+        rtl_style.font.rtl = True
+    
     if heading:
         h = doc.add_heading(heading.strip(), level=2)
         h.alignment = WD_ALIGN_PARAGRAPH.CENTER
         doc.add_paragraph("")  # spacing
 
     story = story.strip()
-
     has_html = any(tag in story.lower() for tag in ["<p", "<b", "<i", "<u", "<strong", "<em"])
 
     html_parser = HtmlToDocx()
 
     if has_html:
         html_parser.add_html_to_document(story, doc)
+        if rtl_mode:
+            for para in doc.paragraphs:
+                para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                for run in para.runs:
+                    run.font.rtl = True
 
     else:
         paragraphs = story.split("\n\n")
@@ -327,7 +333,12 @@ def generate_pib_docx(heading: str, story: str, base_filename: str):
         for block in paragraphs:
             block = block.strip().replace("\n", " ")
             para = doc.add_paragraph(block)
-            para.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            if rtl_mode:
+                para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                for run in para.runs:
+                    run.font.rtl = True
+            else:
+                para.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
     filename = f"{base_filename}.docx"
     tmp_path = os.path.join(tempfile.gettempdir(), filename)
