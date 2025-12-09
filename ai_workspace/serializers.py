@@ -1931,14 +1931,23 @@ class PIBStorySerializer(serializers.ModelSerializer):
             "headline",
             "ministry_department",
             "dateline",
-			"body",
+            "body",
             "project_details",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # If context has "for_file" flag → remove fields you don't want
+        if self.context.get("for_file", False):
+            self.fields.pop("headline")
+            self.fields.pop("body")
 
     def get_project_details(self, obj):
         if obj.project:
             return ProjectQuickSetupSerializer(obj.project).data
         return None
+
 	
 from ai_workspace.models import TaskPibDetails , TaskNewsPIBMT
 

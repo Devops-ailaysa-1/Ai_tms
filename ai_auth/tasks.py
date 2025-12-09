@@ -1703,6 +1703,12 @@ from ai_workspace.models import Task, TaskPibDetails, TrackSegmentsBatchStatus,T
 
 print("ADAPTIVE_TRANSLATE_LLM_MODEL_PIB",settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB)
 
+import html
+def text_to_html(text):
+    text = text.replace("\r\n", "\n")
+    escaped = html.escape(text)
+    html_text = escaped.replace("\n", "<br>\n")
+    return html_text
 
 @task(queue='high-priority')
 def task_create_and_update_pib_news_detail(task_details_id, json_data, update=False):
@@ -1758,8 +1764,8 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                     result.append(trns_2_resp)
 
             trans_story = "\n\n".join(result)
-
-            target_json[key] = trans_story
+            trans_story_html = text_to_html(trans_story)
+            target_json[key] = trans_story_html
   
         #print("Total usage:", usage_story+usage_heading+usage_style)
 

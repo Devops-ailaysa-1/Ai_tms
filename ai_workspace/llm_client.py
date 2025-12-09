@@ -21,6 +21,16 @@ NEBIUS_API_URL = os.getenv('NEBIUS_API_URL')
 PIB_NEBIUS_API_KEY = os.getenv('PIB_NEBIUS_API_KEY')
 PIB_NEBIUS_API_URL = os.getenv('PIB_NEBIUS_API_URL')
 
+import string
+def is_numbers_or_punctuation(text: str) -> bool:
+    text = text.strip()
+    if not text:
+        return False
+    
+    allowed = set(string.digits + string.punctuation+".")
+    
+    return all(c in allowed for c in text)
+
 safety_settings=[
             types.SafetySetting(
                 category="HARM_CATEGORY_HARASSMENT",
@@ -136,6 +146,9 @@ class LLMClient:
         """
         Handle Nebius API requests using the meta-llama/Llama-3.3-70B-Instruct-fast-LoRa model
         """
+        if is_numbers_or_punctuation(messages):
+            return messages,0
+        
         headers = {
             "Content-Type": "application/json",
             "Accept": "*/*",
