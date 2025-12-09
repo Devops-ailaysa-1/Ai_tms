@@ -1,4 +1,9 @@
-{
-  "story": "The President said that promoting handicrafts is important for social empowerment, as this sector has traditionally provided support to people from weaker sections. Handicrafts not only provide a means of livelihood to artisans, but their art also gives them recognition and respect in society. She stated that the development of this sector will also strengthen women&#x27;s empowerment, as women comprise 68 percent of the workforce in this sector.<br><br>The President said that the handicraft industry&#x27;s greatest strength is its reliance on natural and local resources. This industry is eco-friendly and has a low-carbon footprint. Today, the need for an eco-friendly and sustainable lifestyle is being emphasized worldwide. In such a context, this sector can make a significant contribution to sustainability.<br><br><br><br><br><br>The President was happy to note that the GI tag is strengthening the identity of the Indian handicraft products across the world. She urged all stakeholders to work towards obtaining a GI tag for their unique products. She said that the GI tag will give their products a unique identity and enhance their credibility at the national and international level. She underlined that the One District One Product (ODOP) initiative is also strengthening the international recognition of our regional handicraft products.<br><br>The President said that on the strength of the knowledge, dedication and hard work of our artisans accumulated over generations, Indian handicraft products have established their identity across the world. She underlined that the demand for Indian handicrafts offers immense potential for growth. She said that this sector offers excellent opportunities for young entrepreneurs and designers to establish enterprises.",
-  "heading": "PRESIDENT OF INDIA PRESENTS NATIONAL HANDICRAFTS AWARDS FOR THE YEARS 2023 AND 2024"
-}
+a = """
+    asfasdfasdfasdf<br><br>adasdfasdfasdfasdfasdfa<br><br><br><br><br><br>asdfasdfasdfasdfasdfasfd
+"""
+
+res = a.split("<br><br>")
+for i in res:
+    if i.strip():
+        print(i)
+

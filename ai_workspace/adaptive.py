@@ -911,7 +911,8 @@ class PIBStyleAnalysis:
     def process(self, all_paragraph):
         from ai_workspace.models import TaskStyle, PredefinedStyleGuide
         if not TaskStyle.objects.filter(task = self.task).exists():
-            system_prompt = PredefinedStyleGuide.objects.filter(name="translation_pib").first().style_guide_content.format(target_language=self.target_language)
+            system_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_style").prompt.format(target_language = self.target_language)
+            # system_prompt = PredefinedStyleGuide.objects.filter(name="translation_pib").first().style_guide_content.format(target_language=self.target_language)
             task_instance = TaskStyle.objects.create(task=self.task)
 
             combined_text = ''

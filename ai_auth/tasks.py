@@ -1744,7 +1744,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
         for key, message in json_data.items():
             print(key, "This is key")
             result = []
-            story_list = message.split("<p>")
+            story_list = message.split("<br><br>")
             usage_story = 0
             for count, story_para in tqdm(enumerate(story_list)):
                 if story_para.strip():
@@ -1764,8 +1764,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                     result.append(trns_2_resp)
 
             trans_story = "<p>".join(result)
-            trans_story_html = text_to_html(trans_story)
-            target_json[key] = trans_story_html
+            target_json[key] = trans_story
   
         #print("Total usage:", usage_story+usage_heading+usage_style)
 
