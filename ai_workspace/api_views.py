@@ -4928,6 +4928,7 @@ def push_translated_story(request):
     return Response({'msg': "something went wrong with CMS"}, status=400)
 
 class PIBStoriesViewSet(viewsets.ModelViewSet):
+    
     permission_classes = [IsAuthenticated, IsEnterpriseUser]
     serializer_class = PIBStorySerializer
     PROJECT_TYPE_ID = 8
@@ -5004,6 +5005,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
+        from ai_auth.tasks import text_to_html
 
         if not self.check_user_pib(request.user):
             return Response({"detail": "You do not have permission."}, status=403)
@@ -5031,7 +5033,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         pib_data = PIBStorySerializer(pib).data
         heading = pib_data["headline"]
         body = pib_data["body"]
-
+        body = text_to_html(body)
         # Create JSON file for this PIB Story
         pib_json_file = self.get_pib_json_file(heading, body)
         files = [pib_json_file]   # add more if needed
