@@ -1705,10 +1705,10 @@ print("ADAPTIVE_TRANSLATE_LLM_MODEL_PIB",settings.ADAPTIVE_TRANSLATE_LLM_MODEL_P
 
 import html
 def text_to_html(text):
-    text = text.replace("\r\n", "\n")
-    escaped = html.escape(text)
-    html_text = escaped.replace("\n", "<br>\n")
-    return html_text
+    text = html.escape(text)
+    text = text.replace("\r\n", "<br>")
+    text = text.replace("\n\n", "<p>")
+    return text
 
 @task(queue='high-priority')
 def task_create_and_update_pib_news_detail(task_details_id, json_data, update=False):
