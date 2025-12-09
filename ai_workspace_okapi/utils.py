@@ -397,8 +397,9 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
     
     elif mt_engine_id == 5:
         if user and user.is_enterprise and user.user_enterprise.subscription_name == 'Enterprise - PIB':
-            PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib")
-            stage_1_prompt_obj = PIB_system_prompt.filter(stages="pib_stage_1")
+            # PIB_system_prompt = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib")
+            stage_1_prompt_obj = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib_stage_1")
+            # stage_1_prompt_obj = stage_1_prompt_obj.filter(stages="pib_stage_1")
             stage_1_prompt = stage_1_prompt_obj[0] if stage_1_prompt_obj.exists() else None
             record_api_usage.apply_async(("Ailaysa","Machine Translation",uid,email,len(source_string)), queue='low-priority')
             translate = standard_project_create_and_update_pib_news_details(user,task,source_string, source_lang_code, target_lang_code, stage_1_prompt)
