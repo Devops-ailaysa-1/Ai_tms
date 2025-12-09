@@ -5033,7 +5033,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         pib_data = PIBStorySerializer(pib).data
         heading = pib_data["headline"]
         body = pib_data["body"]
-        body = text_to_html(body)
+        # body = text_to_html(body)
         # Create JSON file for this PIB Story
         pib_json_file = self.get_pib_json_file(heading, body)
         files = [pib_json_file]   # add more if needed
