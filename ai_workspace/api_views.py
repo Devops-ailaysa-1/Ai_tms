@@ -5018,7 +5018,12 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         user_1 = user.team.owner if (user.team and (user in user.team.get_project_manager)) else user
 
         # Create PIB Story
+        # files = request.FILES.getlist('files')
+        # if files:
+        #     pib_serializer = PIBStorySerializer(data=request.data,  context={"for_file": True})
+        # else:
         pib_serializer = PIBStorySerializer(data=request.data)
+
         pib_serializer.is_valid(raise_exception=True)
         pib = pib_serializer.save(created_by=request.user)
 
