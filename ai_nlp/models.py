@@ -54,10 +54,10 @@ class PdffileUpload(models.Model):
 
 class PdffileChatHistory(models.Model):
     pdf_file = models.ForeignKey(PdffileUpload,on_delete=models.CASCADE,related_name="pdf_file_chat")
-    question = models.CharField(max_length=2000,null=True,blank=True)
-    answer = models.CharField(max_length=2000,null=True,blank=True)
-    question_mt = models.CharField(max_length=2000,null=True,blank=True)
-    answer_mt = models.CharField(max_length=2000,null=True,blank=True)
+    question = models.TextField( null=True,blank=True)
+    answer = models.TextField( null=True,blank=True)
+    question_mt = models.TextField( null=True,blank=True)
+    answer_mt = models.TextField( null=True,blank=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
     updated_at= models.DateTimeField(auto_now=True,null=True,blank=True)
     token_usage = models.CharField(max_length=2000,null=True,blank=True)
