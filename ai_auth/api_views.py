@@ -1663,7 +1663,7 @@ class InternalMemberCreateView(viewsets.ViewSet,PageNumberPagination):
         team_name = team.name
         role_name = Role.objects.get(id=data.get('role')).name
         existing = self.check_user(email,team_name)
-        owner = self.request.user.team.owner
+        owner = self.request.user.team.owner if self.request.user.team else None
         
         if existing:
             return Response(existing,status = status.HTTP_409_CONFLICT)

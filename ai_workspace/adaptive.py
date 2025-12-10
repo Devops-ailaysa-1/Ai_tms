@@ -887,3 +887,62 @@ class AdaptiveSegmentTranslator(TranslationStage):
             chunks.append(paragraph)
 
         return chunks
+
+
+# PIB Style analysis (Stage 1)
+class PIBStyleAnalysis:
+    def __init__(self, user,task,api_client, target_language):
+         
+        self.stage_percent = 0
+        self.max_word = 1_000
+        self.user = user
+        self.task = task
+        self.api_client = api_client
+        self.target_language = target_language
+        
+
+    def safe_request(self,messages, system_instruction, retries=2):
+        for _ in range(retries):
+            response_text, token_count = self.api_client.send_request(messages=messages, system_instruction=system_instruction)
+            if response_text:
+                return response_text, token_count
+        return None, None
+         
+    def process(self, all_paragraph):
+        from ai_workspace.models import TaskStyle, PredefinedStyleGuide
+        if not TaskStyle.objects.filter(task = self.task).exists():
+            system_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_style").prompt.format(target_language = self.target_language)
+            # system_prompt = PredefinedStyleGuide.objects.filter(name="translation_pib").first().style_guide_content.format(target_language=self.target_language)
+            task_instance = TaskStyle.objects.create(task=self.task)
+
+            combined_text = ''
+            combined_text_list = []
+
+            for single_paragraph in all_paragraph:
+    
+                if len(" ".join(combined_text_list).split()) < self.max_word:   
+                    combined_text_list.append(single_paragraph)
+                else:
+                    break
+
+            combined_text = "".join(combined_text_list)
+            if combined_text:
+
+                try:
+                    result_content_prompt,token = self.safe_request(messages = combined_text, system_instruction=system_prompt)
+                    task_instance.style_guide = result_content_prompt
+                    task_instance.style_output_token=token
+                    task_instance.save()
+ 
+                    logger.info("Adaptive style created")
+                    return result_content_prompt
+ 
+                except Exception as e:
+                    self.task.adaptive_file_translate_status =AdaptiveFileTranslateStatus.FAILED
+                    self.task.save()
+                    logger.error("Adaptive style failed and task marked as FAILED")
+                    logger.exception(f"Exception occurred during style {e}")
+        else:
+            logger.info("Adaptive style already exists")
+             
+            return None

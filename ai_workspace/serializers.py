@@ -1931,14 +1931,23 @@ class PIBStorySerializer(serializers.ModelSerializer):
             "headline",
             "ministry_department",
             "dateline",
-			"body",
+            "body",
             "project_details",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # If context has "for_file" flag → remove fields you don't want
+        if self.context.get("for_file", False):
+            self.fields.pop("headline")
+            self.fields.pop("body")
 
     def get_project_details(self, obj):
         if obj.project:
             return ProjectQuickSetupSerializer(obj.project).data
         return None
+
 	
 from ai_workspace.models import TaskPibDetails , TaskNewsPIBMT
 
@@ -1950,63 +1959,73 @@ class TaskNewsPIBMTSerializer(serializers.ModelSerializer):
 
 
 class TaskPibDetailsSerializer(serializers.ModelSerializer):
-	mt_json = TaskNewsPIBMTSerializer(many=True,required=False,source='tasknewspibdetail')
-	target_language_script = serializers.ReadOnlyField(source='task.target_language_script')
-	edit_allowed = serializers.SerializerMethodField()
-	updated_download = serializers.SerializerMethodField()
+    task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
+    source_json = serializers.JSONField(required=False, read_only=True)
+    target_json = serializers.JSONField(required=False)
+    edit_allowed = serializers.SerializerMethodField()
+    project = serializers.ReadOnlyField(source='task.job.project.id')
+    source_language_id = serializers.ReadOnlyField(source='task.job.source_language.id')
+    target_language_id = serializers.ReadOnlyField(source='task.job.target_language.id')
+    source_language = serializers.ReadOnlyField(source='task.job.source_language.language')
+    target_language = serializers.ReadOnlyField(source='task.job.target_language.language')
+    target_language_script = serializers.ReadOnlyField(source='task.target_language_script')
+    updated_download = serializers.SerializerMethodField()
+    mt_json = TaskNewsPIBMTSerializer(many=True,required=False,source='tasknewspibdetail')
 
-	task = serializers.PrimaryKeyRelatedField(queryset=Task.objects.all())
-	source_json = serializers.JSONField(required=False, read_only=True)
-	target_json = serializers.JSONField(required=False)
-	project = serializers.ReadOnlyField(source='task.job.project.id')
-	source_language_id = serializers.ReadOnlyField(source='task.job.source_language.id')
-	target_language_id = serializers.ReadOnlyField(source='task.job.target_language.id')
-	source_language = serializers.ReadOnlyField(source='task.job.source_language.language')
-	target_language = serializers.ReadOnlyField(source='task.job.target_language.language')
-
-	class Meta:
-		model = TaskPibDetails
-		fields = ( "uid", "task","edit_allowed","mt_json","target_language_script", "updated_download",
-				"project", "source_language_id","target_language_id","source_language", "target_language","source_json","target_json",)
-         
-	def get_edit_allowed(self,obj):
-		request_obj = self.context.get('request')
-		from ai_workspace_okapi.api_views import DocumentViewByDocumentId
-		doc_view_instance = DocumentViewByDocumentId(request_obj)
-		edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.task,given_step=1) #default_step = 1 need to change in future
-		return edit_allowed
+    class Meta:
+        model = TaskPibDetails
+        fields = (
+            "uid",
+            "task",
+			"mt_json",
+            "project",
+            "edit_allowed",
+            "source_language_id",
+            "target_language_id",
+            "source_language",
+            "target_language",
+            "target_language_script",
+            "updated_download",
+            "source_json",
+            "target_json",
+        )
+        read_only_fields = ("source_json",)
+    
+    def get_edit_allowed(self,obj):
+        request_obj = self.context.get('request')
+        from ai_workspace_okapi.api_views import DocumentViewByDocumentId
+        doc_view_instance = DocumentViewByDocumentId(request_obj)
+        edit_allowed = doc_view_instance.edit_allow_check(task_obj=obj.task,given_step=1) #default_step = 1 need to change in future
+        return edit_allowed
 	
-# task_pib_details_instance.target_json = target_json
-	def get_updated_download(self,obj):
-		if obj.target_json:
-			return 'enable'
-		else:
-			return 'disable'
+    
+    def get_updated_download(self,obj):
+        user = self.context.get('request').user
+        managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
+        if (user == obj.task.job.project.ai_user) or (user in managers):
+            return 'enable'
+        else:
+            return 'disable'
 
- 
+	
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
 
-	# def get_updated_download(self,obj):
+        request = self.context.get("request")
+        if request and request.method in ("PUT", "PATCH"):
+            data.pop("source_json", None)
 
-	# 	user = self.context.get('request').user
-	# 	managers = user.team.get_project_manager if user.team and user.team.get_project_manager else []
-	# 	if (user == obj.task.job.project.ai_user) or (user in managers):
-	# 		return 'enable'
-	# 	else:
-	# 		return 'disable'
+        return data
+	
 
-	def create(self, validated_data):
-		pass
+    def update(self, instance, validated_data):
+        target_json = validated_data.get("target_json")
 
-		 
+        if target_json:
+            instance.target_json = target_json
+            instance.save()
 
-	def update(self, instance, validated_data):
-		target_json = validated_data.get("target_json")
-
-		if target_json:
-			instance.target_json = target_json
-			instance.save()
-
-		return instance
+        return instance
 
 
 class MinistryNameSerializer(serializers.ModelSerializer):

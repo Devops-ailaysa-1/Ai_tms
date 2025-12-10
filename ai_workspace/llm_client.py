@@ -1,3 +1,4 @@
+import json
 import backoff
 from google.genai import types
 from django.conf import settings
@@ -17,6 +18,18 @@ ALTERNATE_GEMINI_MODEL = settings.ALTERNATE_GEMINI_MODEL
 ADAPTIVE_STYLE_LLM_MODEL =  settings.ALTERNATE_GEMINI_MODEL
 NEBIUS_API_KEY = os.getenv('NEBIUS_API_KEY')
 NEBIUS_API_URL = os.getenv('NEBIUS_API_URL')
+PIB_NEBIUS_API_KEY = os.getenv('PIB_NEBIUS_API_KEY')
+PIB_NEBIUS_API_URL = os.getenv('PIB_NEBIUS_API_URL')
+
+import string
+def is_numbers_or_punctuation(text: str) -> bool:
+    text = text.strip()
+    if not text:
+        return False
+    
+    allowed = set(string.digits + string.punctuation+".")
+    
+    return all(c in allowed for c in text)
 
 safety_settings=[
             types.SafetySetting(
@@ -61,6 +74,9 @@ class LLMClient:
                 self.client = client
 
             elif self.provider == "nebius":
+                # Nebius uses requests library, no specific client initialization needed
+                self.client = None
+            elif self.provider == "pib_nebius":
                 # Nebius uses requests library, no specific client initialization needed
                 self.client = None
 
@@ -128,8 +144,11 @@ class LLMClient:
     @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
     def _handle_nebius(self, messages, system_instruction, max_tokens=60000):
         """
-        Handle Nebius API requests using the meta-llama/Llama-3.3-70B-Instruct-fast-LoRa model
+        Handle Nebius API requests using the gemma model 27b with fast model
         """
+        if is_numbers_or_punctuation(messages):
+            return messages,0
+        
         headers = {
             "Content-Type": "application/json",
             "Accept": "*/*",
@@ -151,10 +170,10 @@ class LLMClient:
         }
 
         try:
-            response = requests.post(NEBIUS_API_URL, headers=headers, json=data, timeout=60)
-             
+            response = requests.post(NEBIUS_API_URL, headers=headers, json=data, timeout=120)
+            
 
-            response_data = response.json()             
+            response_data = response.json()
 
             # Extract the generated text from the response
             if 'choices' in response_data and len(response_data['choices']) > 0:

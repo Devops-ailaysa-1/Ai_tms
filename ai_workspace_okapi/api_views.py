@@ -1082,12 +1082,12 @@ class MT_RawAndTM_View(views.APIView):
 
                     # Without adapting glossary
                     translation = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
-                                                doc.source_language_code, doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits)
+                                                doc.source_language_code, doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits, task=task)
                 else:
 
                     # Adapting glossary
                     translation_original = get_translation(task_assign_mt_engine.id, mt_raw.segment.source, \
-                                                doc.source_language_code, doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits)
+                                                doc.source_language_code, doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits, task=task)
                     
                     translation = replace_with_gloss(seg.source,translation_original,task)
 
@@ -1158,12 +1158,12 @@ class MT_RawAndTM_View(views.APIView):
                 if not doc.job.project.isAdaptiveTranslation:
                     # Without adapting glossary
                     translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits, task=task)
                     translation_original = translation
                 else:
                     # Adapting glossary
                     translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                                doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits)
+                                                doc.target_language_code, user_id=doc.owner_pk, cc=consumable_credits, task=task)
                     translation = replace_with_gloss(split_seg.source, translation_original,task)
                 
                 # Updating existing record of MtRawSplitSegment with new Task MT engine
@@ -1177,12 +1177,12 @@ class MT_RawAndTM_View(views.APIView):
                 if not doc.job.project.isAdaptiveTranslation:
                     # Without adapting glossary
                     translation = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits, task=task)
                     translation_original = translation
                 else:
                     # Adapting glossary
                     translation_original = get_translation(task_assign_mt_engine.id, split_seg.source, doc.source_language_code,
-                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits)
+                                                doc.target_language_code,user_id=doc.owner_pk,cc=consumable_credits, task=task)
                     translation = replace_with_gloss(split_seg.source, translation_original, task)
 
                 MtRawSplitSegment.objects.create(**{"mt_raw":translation, "mt_only":translation_original, "split_segment_id" : segment_id})
@@ -2789,13 +2789,31 @@ def json_bilingual(src_json,tar_json,split_dict,document_to_file,language_pair):
     target_data = split_dict(tar_json)
     source_data.pop('newsId',None)
     target_data.pop('newsId',None)
+
     if source_data.get('media'):
         source_data['media'] = document_to_file.clean_text(source_data.get('media', [{}])[0].get('caption'))
         target_data['media'] = document_to_file.clean_text(target_data.get('media', [{}])[0].get('caption'))
     if source_data.get('story'):
         source_data['story'] =  document_to_file.clean_text(source_data.get('story'))
         target_data['story'] =  document_to_file.clean_text(target_data.get('story'))
-    flattened_data = {key:[value,target_data[key]] for key, value in source_data.items()}
+    
+    print(source_data, "source data in json_bilingual")
+    ordered_keys = []
+    if "heading" in source_data:
+        ordered_keys.append("heading")
+
+    if "story" in source_data:
+        ordered_keys.append("story")
+
+    for k in source_data.keys():
+        if k not in ordered_keys:
+            ordered_keys.append(k)
+
+    flattened_data = {
+        key: [source_data[key], target_data[key]]
+        for key in ordered_keys
+    }
+
     flattened_data = pd.DataFrame(flattened_data).transpose()
     flattened_data.columns = language_pair
     writer = pd.ExcelWriter(output, engine='xlsxwriter')
@@ -2884,6 +2902,8 @@ def download_pib(request):
     task_data = ser.data
     res_text = task_data['output_file_path']
 
+    target_language_code = obj.job.target_language_code
+
     if output_type == "ORIGINAL" or output_type == 'MTRAW':
         data = obj.pib_task.last().target_json if output_type == 'ORIGINAL' else obj.pib_task.first().tasknewspibdetail.first().mt_raw_json
         heading = data.get("heading", "")
@@ -2892,14 +2912,15 @@ def download_pib(request):
         source_json = obj.pib_task.last().source_json
         file_cont = source_json.get('heading')
         filename = "_".join(file_cont.split())[:50]
-        filename += f"({obj.job.source_language_code}->{obj.job.target_language_code})"
+        filename += f"({obj.job.source_language_code}_{obj.job.target_language_code})"
 
 
         # generate DOCX
         docx_path = generate_pib_docx(
             heading=heading,
             story=story,
-            base_filename=filename[:50]
+            base_filename=filename,
+            language = target_language_code
         )
 
         # return the file
@@ -2907,7 +2928,6 @@ def download_pib(request):
         return document_to_file.get_file_response(docx_path)
 
     elif output_type == "BILINGUAL":
-        # untouched
         source_json = obj.pib_task.last().source_json
         target_json = obj.pib_task.last().target_json
 
@@ -2925,7 +2945,7 @@ def download_pib(request):
 
         file_cont = source_json.get('heading')
         filename = "_".join(file_cont.split())[:50]
-        filename += f"({obj.job.source_language_code}->{obj.job.target_language_code})" + ".xlsx"
+        filename += f"({obj.job.source_language_code}_{obj.job.target_language_code})" + ".xlsx"
         response = document_to_file.get_file_response(
             csv_data,
             pandas_dataframe=True,
