@@ -144,7 +144,7 @@ class LLMClient:
     @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
     def _handle_nebius(self, messages, system_instruction, max_tokens=60000):
         """
-        Handle Nebius API requests using the meta-llama/Llama-3.3-70B-Instruct-fast-LoRa model
+        Handle Nebius API requests using the gemma model 27b with fast model
         """
         if is_numbers_or_punctuation(messages):
             return messages,0
