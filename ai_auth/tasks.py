@@ -929,11 +929,11 @@ def replace_mt_with_gloss(src, raw_mt, gloss, source_language, target_language):
         gloss_list = tamil_morph_prompt(src,raw_mt,gloss,tar_lang_id_to_check,src_lang,tar_lang)
 
     # replace_prompt = prompt_phrase.format(tar_lang, src_lang, src,  tar_lang, raw_mt,gloss_list, tar_lang)
-    replace_prompt = prompt_phrase.format(target_language = tar_lang,
-                                          source_language = src_lang,
-                                          source_sentence = src, 
-                                          target_sentence = raw_mt,
+    replace_prompt = prompt_phrase.format(target_language = tar_lang, source_language = src_lang, source_sentence = src, target_sentence = raw_mt,
                                           glossary_list = str(gloss_list))
+    
+    print("replace_prompt",replace_prompt)
+    
     
     extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
 
@@ -1709,12 +1709,22 @@ from ai_workspace.models import Task, TaskPibDetails, TrackSegmentsBatchStatus,T
 
 print("ADAPTIVE_TRANSLATE_LLM_MODEL_PIB",settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB)
 
-import html
+import html, re
 def text_to_html(text):
     text = html.escape(text)
     text = text.replace("\r\n", "<br>")
     text = text.replace("\n\n", "<p>")
     return text
+
+
+
+def html_to_paragraphs(text):
+    text = re.sub(r'<br\s*/?>', '\n', text)
+    parts = re.split(r'\n\s*\n', text)
+    paragraphs = [p.strip() for p in parts if p.strip()]
+    return paragraphs
+
+
 
 @task(queue='high-priority')
 def task_create_and_update_pib_news_detail(task_details_id, json_data, update=False):
@@ -1745,7 +1755,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
 
         for key, message in json_data.items():
             result = []
-            story_list = message.split("<br><br>")
+            story_list = html_to_paragraphs(text = message)
             usage_story = 0
             for count, story_para in tqdm(enumerate(story_list)):
                 if story_para.strip():
