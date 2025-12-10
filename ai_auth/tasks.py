@@ -932,7 +932,7 @@ def replace_mt_with_gloss(src, raw_mt, gloss, source_language, target_language):
     replace_prompt = prompt_phrase.format(target_language = tar_lang, source_language = src_lang, source_sentence = src, target_sentence = raw_mt,
                                           glossary_list = str(gloss_list))
     
-    print("replace_prompt",replace_prompt)
+    #print("replace_prompt",replace_prompt)
     
     
     extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
@@ -1782,7 +1782,8 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                         
                         result.append(trns_2_resp)
 
-            trans_story = "<p>".join(result)
+            #trans_story = "<p>".join(result)
+            trans_story = "".join(f"<p>{para}</p>" for para in result)
             target_json[key] = trans_story
 
         task_pib_details_instance.target_json = target_json
