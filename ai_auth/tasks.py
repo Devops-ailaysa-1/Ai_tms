@@ -928,7 +928,13 @@ def replace_mt_with_gloss(src, raw_mt, gloss, source_language, target_language):
     if tar_lang_id_to_check in tar_lang_id:
         gloss_list = tamil_morph_prompt(src,raw_mt,gloss,tar_lang_id_to_check,src_lang,tar_lang)
 
-    replace_prompt = prompt_phrase.format(tar_lang, src_lang, src,  tar_lang, raw_mt,gloss_list, tar_lang)
+    # replace_prompt = prompt_phrase.format(tar_lang, src_lang, src,  tar_lang, raw_mt,gloss_list, tar_lang)
+    replace_prompt = prompt_phrase.format(target_language = tar_lang,
+                                          source_language = src_lang,
+                                          source_sentence = src, 
+                                          target_sentence = raw_mt,
+                                          glossary_list = str(gloss_list))
+    
     extra_prompt = ExtraReplacePrompt.objects.filter(internal_prompt=internal_flow_instance,language=target_language)
 
     if extra_prompt:
@@ -944,7 +950,7 @@ def replace_mt_with_gloss(src, raw_mt, gloss, source_language, target_language):
             lang_code = source_language.locale_code
             tamil_morph_result = tamil_morph_prompt(src,raw_mt,gloss,lang_code,src_lang,tar_lang)
         res = gemini_model_generative(lang_gram_prompt.prompt.format(raw_mt,str(tamil_morph_result),res)) #src_lang,src,raw_mt ,gloss, 
-        print('res1',res)
+        #print('res1',res)
         
         # Credit calculation
 
