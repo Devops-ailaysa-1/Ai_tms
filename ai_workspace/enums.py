@@ -23,3 +23,7 @@ class PibTranslateStatusChoices(models.TextChoices):
     in_progress = "In_Progress", "in_progress"
     completed = "COMPLETED", "completed"
     failed = "FAILED", "failed"
+
+class PibStoryCreationType(models.TextChoices):
+    TEXT_INPUT = "text_input", "Text Input"
+    FILE_UPLOAD = "file_upload", "File Upload"
