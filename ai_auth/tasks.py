@@ -1713,8 +1713,11 @@ def html_to_list(text):
     clean = re.sub(r"<br\s*/?>", "<p></p>", text)
  
     parts = re.findall(r"<p>(.*?)</p>", clean)
+    if parts:
     
-    return parts 
+        return parts
+    else:
+        return [text]
 
  
 def text_to_html(text):
