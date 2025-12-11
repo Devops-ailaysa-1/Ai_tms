@@ -3216,10 +3216,12 @@ def get_consumable_credits_for_text(source,target_lang,source_lang):
                  "processor_name" : "plain-text-processor",
                  "extension":".txt"
                  }
+    
     res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
         data={"segmentWordCountdata":json.dumps(seg_data)})#,timeout=3)
-    
+    print("spring_host", spring_host)
     print(res.json())
+    print("seg_data",seg_data)
 
 
     if res.status_code == 200:
