@@ -305,19 +305,22 @@ def generate_pib_docx(heading: str, story: str, base_filename: str, language=Non
     RTL_LANGS = ["ar", "ur", "fa", "he"]
     rtl_mode = language in RTL_LANGS
 
+    html_parser = HtmlToDocx()
+
     if rtl_mode:
         rtl_style = doc.styles.add_style("RTL_Style", WD_STYLE_TYPE.CHARACTER)
         rtl_style.font.rtl = True
     
     if heading:
-        h = doc.add_heading(heading.strip(), level=2)
+        #h = doc.add_heading(heading.strip(), level=2)
+        h = html_parser.add_html_to_document(heading.strip(), doc)
         h.alignment = WD_ALIGN_PARAGRAPH.CENTER
         doc.add_paragraph("")  # spacing
 
     story = story.strip()
     has_html = any(tag in story.lower() for tag in ["<p", "<b", "<i", "<u", "<strong", "<em"])
 
-    html_parser = HtmlToDocx()
+    
 
     if has_html:
         html_parser.add_html_to_document(story, doc)
