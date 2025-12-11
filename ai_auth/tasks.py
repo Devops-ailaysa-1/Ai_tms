@@ -1707,13 +1707,25 @@ from ai_workspace.llm_client import LLMClient
 from ai_workspace.models import Task, TaskPibDetails, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus, TaskNewsPIBMT
 
 
+import re
  
+def html_to_list(text):
+    clean = re.sub(r"<br\s*/?>", "<p></p>", text)
+ 
+    parts = re.findall(r"<p>(.*?)</p>", clean)
+    
+    return parts 
 
-import html, re
+ 
 def text_to_html(text):
-    text = html.escape(text)
-    text = text.replace("\r\n", "<p>")
-    return text
+    text = text.split("\r\n")
+    all_split = []
+    for i in text:
+        if i:
+            all_split.append(f"<p>{i}</p>" )
+        else:
+            all_split.append("<br>")
+    return "".join(all_split)
  
 
 
@@ -1726,11 +1738,9 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
     try:
         nebius_llm_client = LLMClient("nebius", ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "") 
 
-        #heading = json_data['heading']
         story = json_data['story']
 
         task_pib_details_instance = TaskPibDetails.objects.get(uid=task_details_id)
-        #proj_ins = task_pib_details_instance.task.proj_obj
 
         style_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_style").prompt
         pib_stage_1_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_1").prompt
@@ -1746,7 +1756,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
 
         for key, message in json_data.items():
             result = []
-            story_list = message.split("<p>") 
+            story_list = html_to_list(message)#.split("<p>") 
             #print("story_list",story_list)
             usage_story = 0
             for count, story_para in tqdm(enumerate(story_list)):
