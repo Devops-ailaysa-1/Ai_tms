@@ -5005,7 +5005,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
-        #from ai_auth.tasks import text_to_html
+        from ai_auth.tasks import text_to_html
 
         if not self.check_user_pib(request.user):
             return Response({"detail": "You do not have permission."}, status=403)
@@ -5021,7 +5021,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
  
         pib_serializer = PIBStorySerializer(data=request.data)
 
-        print(request.data)
+ 
 
         pib_serializer.is_valid(raise_exception=True)
         pib = pib_serializer.save(created_by=request.user)
@@ -5030,7 +5030,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         pib_data = PIBStorySerializer(pib).data
         heading = pib_data["headline"]
         body = pib_data["body"]
-        #body = text_to_html(body)
+        body = text_to_html(body)
         
         # Create JSON file for this PIB Story
         pib_json_file = self.get_pib_json_file(heading, body)
