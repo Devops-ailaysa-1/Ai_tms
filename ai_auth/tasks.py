@@ -1709,12 +1709,13 @@ from ai_workspace.models import Task, TaskPibDetails, TrackSegmentsBatchStatus,T
 
 print("ADAPTIVE_TRANSLATE_LLM_MODEL_PIB",settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB)
 
-import html, re
-def text_to_html(text):
-    text = html.escape(text)
-    text = text.replace("\r\n", "<br>")
-    text = text.replace("\n\n", "<p>")
-    return text
+# import html, re
+# def text_to_html(text):
+#     text = html.escape(text)
+#     #text = text.replace("\r\n", "<br>")
+#     text = text.replace("\n\n", "<p>")
+#     print("text_to_html", text)
+#     return text
 
 
 
@@ -1755,7 +1756,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
 
         for key, message in json_data.items():
             result = []
-            story_list = html_to_paragraphs(text = message)
+            story_list = message.split("\n\n") #html_to_paragraphs(text = message)
             usage_story = 0
             for count, story_para in tqdm(enumerate(story_list)):
                 if story_para.strip():
