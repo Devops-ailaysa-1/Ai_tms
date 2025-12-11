@@ -5024,16 +5024,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
 
         user = request.user
         user_1 = user.team.owner if (user.team and (user in user.team.get_project_manager)) else user
-<<<<<<< Updated upstream
- 
         pib_serializer = PIBStorySerializer(data=request.data)
-
- 
-
-=======
-
-        pib_serializer = PIBStorySerializer(data=request.data)
->>>>>>> Stashed changes
         pib_serializer.is_valid(raise_exception=True)
         pib = pib_serializer.save(created_by=request.user)
 
