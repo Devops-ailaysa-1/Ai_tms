@@ -1786,7 +1786,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
 
 
             #trans_story = "<p>".join(result)
-            trans_story = "".join(f"<p>{para}</p>" for para in result)
+            trans_story = "".join(f"<br>{para}<br>" for para in result)
             target_json[key] = trans_story
 
         task_pib_details_instance.target_json = target_json
