@@ -3204,6 +3204,9 @@ class ExpressProjectSetupView(viewsets.ModelViewSet):
 
 
 def get_consumable_credits_for_text(source,target_lang,source_lang):
+    print("source",source)
+    print("target_lang",target_lang)
+    print(source_lang)
     '''
     This is to calculate the credits for text by calling API in spring_boot which intern returns word_count.
     '''
@@ -3215,6 +3218,9 @@ def get_consumable_credits_for_text(source,target_lang,source_lang):
                  }
     res = requests.post(url=f"http://{spring_host}:8080/segment/word_count", \
         data={"segmentWordCountdata":json.dumps(seg_data)})#,timeout=3)
+    
+    print(res.json())
+
 
     if res.status_code == 200:
         return res.json()

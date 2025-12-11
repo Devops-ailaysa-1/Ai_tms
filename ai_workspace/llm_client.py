@@ -5,6 +5,7 @@ from django.conf import settings
 import logging
 import requests
 import os
+from google.oauth2 import service_account
 logger = logging.getLogger('django')
 from ai_workspace import exceptions
 
@@ -16,6 +17,12 @@ OPENAI_MODEL_NAME_ADAPT = settings.OPENAI_MODEL_NAME_ADAPT
 OPENAI_API_KEY = settings.OPENAI_API_KEY
 ALTERNATE_GEMINI_MODEL = settings.ALTERNATE_GEMINI_MODEL
 ADAPTIVE_STYLE_LLM_MODEL =  settings.ALTERNATE_GEMINI_MODEL
+
+AI_RESEARCH_VERTEX_AI_MODEL_LINK = settings.AI_RESEARCH_VERTEX_AI_MODEL_LINK
+AI_RESEARCH_VERTEX_AI_LOCATION = settings.AI_RESEARCH_VERTEX_AI_LOCATION
+AI_RESEARCH_VERTEX_AI_JSON_PATH =  settings.AI_RESEARCH_VERTEX_AI_JSON_PATH
+AI_RESEARCH_VERTEX_AI = settings.AI_RESEARCH_VERTEX_AI
+
 NEBIUS_API_KEY = os.getenv('NEBIUS_API_KEY')
 NEBIUS_API_URL = os.getenv('NEBIUS_API_URL')
 PIB_NEBIUS_API_KEY = os.getenv('PIB_NEBIUS_API_KEY')
@@ -26,10 +33,11 @@ def is_numbers_or_punctuation(text: str) -> bool:
     text = text.strip()
     if not text:
         return False
-    
     allowed = set(string.digits + string.punctuation+".")
-    
     return all(c in allowed for c in text)
+
+
+credentials_nebius = service_account.Credentials.from_service_account_file(AI_RESEARCH_VERTEX_AI_MODEL_LINK,scopes=["https://www.googleapis.com/auth/cloud-platform"])
 
 safety_settings=[
             types.SafetySetting(
@@ -140,6 +148,37 @@ class LLMClient:
                 output_stream = output_stream + " "
         output_stream = output_stream.strip()
         return output_stream ,usage
+    
+    @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
+    def _handle_vertex_ai_pib(self, messages, system_instruction, max_tokens=60000):
+        
+        if is_numbers_or_punctuation(messages):
+            return messages,0
+        
+ 
+         
+        
+        
+
+        client = genai.Client(project = AI_RESEARCH_VERTEX_AI,  vertexai=True, location='us-central1',credentials = credentials_nebius )
+
+        generate_content_config = types.GenerateContentConfig(temperature = 1, top_p = 0.95,
+                                                              system_instruction = system_instruction)
+        
+        for chunk in client.models.generate_content_stream(model = AI_RESEARCH_VERTEX_AI_MODEL_LINK,
+                                                   contents = messages,
+                                                   config = generate_content_config):
+             
+             full_text = ""
+             if chunk.text:
+                 full_text+=chunk.text
+             
+ 
+        
+        return full_text
+
+
+
 
     @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
     def _handle_nebius(self, messages, system_instruction, max_tokens=60000):
