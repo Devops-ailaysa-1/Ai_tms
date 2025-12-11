@@ -44,7 +44,7 @@ def lang_detector(user_text):
         if isinstance(lang, list):
             return lang[0]
         else:
-            return None
+            return lang
 
     except Exception as e:
         logger.error(f"error: {str(e)}")
