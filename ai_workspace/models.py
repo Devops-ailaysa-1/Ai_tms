@@ -54,7 +54,7 @@ from django.db.models import CharField
 from django.core.cache import cache
 import functools
 from django_celery_results.models import TaskResult
-from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus, ErrorStatus, PibTranslateStatusChoices
+from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus, ErrorStatus, PibTranslateStatusChoices, PibStoryCreationType
 from django.conf import settings
 
 def set_pentm_dir(instance):
@@ -2100,7 +2100,7 @@ class PIBStory(models.Model):
     body = models.TextField()
     ministry_department = models.ForeignKey('MinistryName', null=True, blank=True, to_field='uid', on_delete=models.SET_NULL)
     dateline = models.CharField(max_length=255, blank=True, null=True)
-
+    story_creation_type = models.CharField(max_length=50,choices=PibStoryCreationType.choices, default=PibStoryCreationType.TEXT_INPUT, null=False, blank=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 

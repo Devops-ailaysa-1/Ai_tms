@@ -109,7 +109,7 @@ import spacy, time
 from django_celery_results.models import TaskResult
 from os.path import exists
 from ai_workspace_okapi.utils import get_credit_count
-from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus, PibTranslateStatusChoices
+from ai_workspace.enums import AdaptiveFileTranslateStatus, BatchStatus, PibTranslateStatusChoices, PibStoryCreationType
 from django.core.cache import cache
 import uuid
 from ai_auth.tasks import write_doc_json_file,record_api_usage, create_doc_and_write_seg_to_db, task_create_and_update_pib_news_detail
@@ -4963,15 +4963,21 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         return im_file
     
     @staticmethod
-    def create_pib_news_detail(pr, pib):
+    def create_pib_news_detail(pr, pib, creation_type):
         tasks = pr.get_tasks
         mt_engine = AilaysaSupportedMtpeEngines.objects.get(name='PIB_Translator')
+            
         for task in tasks:
-            file_path = task.file.file.path
-            with open(file_path, 'r') as fp:
-                json_data = json.load(fp)
+            print(creation_type, "This is creation type")
+            if creation_type is None or creation_type == PibStoryCreationType.FILE_UPLOAD:
+                json_data = None
+            else:
+                file_path = task.file.file.path
+                with open(file_path, 'r') as fp:
+                    json_data = json.load(fp)
 
-            instance_pib_details = TaskPibDetails.objects.create(task=task,source_json=json_data, pib_story=pib, status=PibTranslateStatusChoices.yet_to_start)
+            status = PibTranslateStatusChoices.in_progress if pr.pre_translate else PibTranslateStatusChoices.yet_to_start
+            instance_pib_details = TaskPibDetails.objects.create(task=task,source_json=json_data, pib_story=pib, status=status)
             TaskNewsPIBMT.objects.create(task_pib_detail=instance_pib_details,mt_engine=mt_engine)
 
 
@@ -5018,25 +5024,33 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
 
         user = request.user
         user_1 = user.team.owner if (user.team and (user in user.team.get_project_manager)) else user
+<<<<<<< Updated upstream
  
         pib_serializer = PIBStorySerializer(data=request.data)
 
  
 
+=======
+
+        pib_serializer = PIBStorySerializer(data=request.data)
+>>>>>>> Stashed changes
         pib_serializer.is_valid(raise_exception=True)
         pib = pib_serializer.save(created_by=request.user)
 
-        # PIB Data (already validated)
-        pib_data = PIBStorySerializer(pib).data
-        heading = pib_data["headline"]
-        body = pib_data["body"]
-        body = text_to_html(body)
-        
-        # Create JSON file for this PIB Story
-        pib_json_file = self.get_pib_json_file(heading, body)
-        files = [pib_json_file]   # add more if needed
+        story_creation_type = request.data.get("story_creation_type", None)
+        if story_creation_type and story_creation_type == PibStoryCreationType.FILE_UPLOAD:
+            files = request.FILES.getlist('files')
 
-        # Create the project
+        else:
+            pib_data = PIBStorySerializer(pib).data
+            heading = pib_data["headline"]
+            body = pib_data["body"]
+            body = text_to_html(body)
+            
+            # Create JSON file for this PIB Story
+            pib_json_file = self.get_pib_json_file(heading, body)
+            files = [pib_json_file]
+
         serializer = ProjectQuickSetupSerializer(
             data={
                 **request.data,
@@ -5045,15 +5059,14 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
             },
             context={"request": request, "user_1": user_1}
         )
-
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
         pr = Project.objects.get(id=serializer.data.get("id"))
         pib.project = pr
         pib.save()
-        self.create_pib_news_detail(pr, pib)
-        # Create task-pib details
+        self.create_pib_news_detail(pr, pib, story_creation_type)
+       
         # Update file-create type
         ProjectFilesCreateType.objects.filter(project=pr).update(
             file_create_type=ProjectFilesCreateType.FileType.from_stories
