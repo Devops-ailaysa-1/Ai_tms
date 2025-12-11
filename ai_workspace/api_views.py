@@ -5005,7 +5005,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType
-        from ai_auth.tasks import text_to_html
+        #from ai_auth.tasks import text_to_html
 
         if not self.check_user_pib(request.user):
             return Response({"detail": "You do not have permission."}, status=403)
