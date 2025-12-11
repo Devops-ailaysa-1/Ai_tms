@@ -37,7 +37,7 @@ def is_numbers_or_punctuation(text: str) -> bool:
     return all(c in allowed for c in text)
 
 
-credentials_nebius = service_account.Credentials.from_service_account_file(AI_RESEARCH_VERTEX_AI_MODEL_LINK,scopes=["https://www.googleapis.com/auth/cloud-platform"])
+#credentials_nebius = service_account.Credentials.from_service_account_file(AI_RESEARCH_VERTEX_AI_MODEL_LINK,scopes=["https://www.googleapis.com/auth/cloud-platform"])
 
 safety_settings=[
             types.SafetySetting(
@@ -149,33 +149,30 @@ class LLMClient:
         output_stream = output_stream.strip()
         return output_stream ,usage
     
-    @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
-    def _handle_vertex_ai_pib(self, messages, system_instruction, max_tokens=60000):
+    # @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
+    # def _handle_vertex_ai_pib(self, messages, system_instruction, max_tokens=60000):
         
-        if is_numbers_or_punctuation(messages):
-            return messages,0
+    #     if is_numbers_or_punctuation(messages):
+    #         return messages,0
         
- 
-         
-        
-        
+    
 
-        client = genai.Client(project = AI_RESEARCH_VERTEX_AI,  vertexai=True, location='us-central1',credentials = credentials_nebius )
+    #     client = genai.Client(project = AI_RESEARCH_VERTEX_AI,  vertexai=True, location='us-central1',credentials = credentials_nebius )
 
-        generate_content_config = types.GenerateContentConfig(temperature = 1, top_p = 0.95,
-                                                              system_instruction = system_instruction)
+    #     generate_content_config = types.GenerateContentConfig(temperature = 1, top_p = 0.95,
+    #                                                           system_instruction = system_instruction)
         
-        for chunk in client.models.generate_content_stream(model = AI_RESEARCH_VERTEX_AI_MODEL_LINK,
-                                                   contents = messages,
-                                                   config = generate_content_config):
+    #     for chunk in client.models.generate_content_stream(model = AI_RESEARCH_VERTEX_AI_MODEL_LINK,
+    #                                                contents = messages,
+    #                                                config = generate_content_config):
              
-             full_text = ""
-             if chunk.text:
-                 full_text+=chunk.text
+    #          full_text = ""
+    #          if chunk.text:
+    #              full_text+=chunk.text
              
  
         
-        return full_text
+    #     return full_text
 
 
 
