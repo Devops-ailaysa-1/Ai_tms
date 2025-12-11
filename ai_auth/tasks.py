@@ -1707,24 +1707,14 @@ from ai_workspace.llm_client import LLMClient
 from ai_workspace.models import Task, TaskPibDetails, TrackSegmentsBatchStatus,TrackSegmentsBatchStatus, TaskNewsPIBMT
 
 
-print("ADAPTIVE_TRANSLATE_LLM_MODEL_PIB",settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB)
+ 
 
-# import html, re
-# def text_to_html(text):
-#     text = html.escape(text)
-#     #text = text.replace("\r\n", "<br>")
-#     text = text.replace("\n\n", "<p>")
-#     print("text_to_html", text)
-#     return text
-
-
-
-def html_to_paragraphs(text):
-    text = re.sub(r'<br\s*/?>', '\n', text)
-    parts = re.split(r'\n\s*\n', text)
-    paragraphs = [p.strip() for p in parts if p.strip()]
-    return paragraphs
-
+import html, re
+def text_to_html(text):
+    text = html.escape(text)
+    text = text.replace("\r\n", "<p>")
+    return text
+ 
 
 
 @task(queue='high-priority')
@@ -1756,8 +1746,8 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
 
         for key, message in json_data.items():
             result = []
-            story_list = message.split("\r\n") #html_to_paragraphs(text = message)
-            print("story_list",story_list)
+            story_list = message.split("<p>") 
+            #print("story_list",story_list)
             usage_story = 0
             for count, story_para in tqdm(enumerate(story_list)):
                 if story_para.strip():
