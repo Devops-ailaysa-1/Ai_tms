@@ -311,10 +311,19 @@ def generate_pib_docx(heading: str, story: str, base_filename: str, language=Non
         rtl_style = doc.styles.add_style("RTL_Style", WD_STYLE_TYPE.CHARACTER)
         rtl_style.font.rtl = True
     
+    # if heading:
+    #     h = doc.add_heading(heading.strip(), level=2)
+    #     h.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    #     doc.add_paragraph("")  # spacing
+
     if heading:
-        #h = doc.add_heading(heading.strip(), level=2)
-        h = html_parser.add_html_to_document(heading.strip(), doc)
-        h.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        heading_html = f"<h2>{heading.strip()}</h2>"
+        html_parser.add_html_to_document(heading_html, doc)
+
+        # center last paragraph (the heading)
+        last_para = doc.paragraphs[-1]
+        last_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
         doc.add_paragraph("")  # spacing
 
     story = story.strip()
