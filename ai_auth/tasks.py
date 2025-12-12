@@ -1752,6 +1752,10 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
         pib_stage_1_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_1").prompt
         pib_stage_2_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_2").prompt
 
+        print(pib_stage_1_prompt)
+        print("-------------------------")
+        print(pib_stage_2_prompt)
+
         source_language = task_pib_details_instance.task.job.source_language.language
         target_language = task_pib_details_instance.task.job.target_language.language
         style_prompt = style_prompt.format(target_language = target_language)
