@@ -1723,6 +1723,7 @@ def html_to_list(text):
  
 def text_to_html(text):
     text = text.split("\r\n")
+    print("text_to_html",text)
     all_split = []
     for i in text:
         if i:

@@ -4964,6 +4964,8 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
             "story": body,
             "sub_headlines":sub_headlines
         }
+        print("file_data")
+        print(file_data)
         name = f"{uuid.uuid4()}.json"
 
         json_content = json.dumps(file_data, ensure_ascii=False, indent=2)
@@ -4999,10 +5001,6 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         
         task = get_object_or_404(Task, id=pib_task_id)
         instance_pib_details = TaskPibDetails.objects.filter(task=task).first()
-
-        print(PibTranslateStatusChoices.in_progress)
-        print(instance_pib_details)
-        print(instance_pib_details.status)
 
         if instance_pib_details.status == PibTranslateStatusChoices.in_progress:
             return Response({"detail": "Translation already in progress"}, status=400)
@@ -5040,7 +5038,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         pib_serializer = PIBStorySerializer(data=request.data)
         pib_serializer.is_valid(raise_exception=True)
         pib = pib_serializer.save(created_by=request.user)
-
+ 
         story_creation_type = request.data.get("story_creation_type", None)
         if story_creation_type and story_creation_type == PibStoryCreationType.FILE_UPLOAD:
             files = request.FILES.getlist('files')
@@ -5056,6 +5054,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
             # pib_json_file = self.get_pib_json_file(heading, body)
             pib_json_file = self.get_pib_json_file(heading, body, sub_headlines)
             files = [pib_json_file]
+ 
 
         serializer = ProjectQuickSetupSerializer(
             data={
