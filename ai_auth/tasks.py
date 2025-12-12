@@ -1736,14 +1736,15 @@ def text_to_html(text):
 def task_create_and_update_pib_news_detail(task_details_id, json_data, update=False):
     from ai_staff.models import AdaptiveSystemPrompt
     ADAPTIVE_TRANSLATE_LLM_MODEL_PIB = settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB
-    
     from tqdm import tqdm
+
+    task_pib_details_instance = TaskPibDetails.objects.get(uid=task_details_id)
     try:
         nebius_llm_client = LLMClient("nebius", ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "") 
 
-        story = json_data['story']
+        print(json_data)
 
-        task_pib_details_instance = TaskPibDetails.objects.get(uid=task_details_id)
+        story = json_data['story']
 
         style_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_style").prompt
         pib_stage_1_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_1").prompt

@@ -4993,6 +4993,10 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         task = get_object_or_404(Task, id=pib_task_id)
         instance_pib_details = TaskPibDetails.objects.filter(task=task).first()
 
+        print(PibTranslateStatusChoices.in_progress)
+        print(instance_pib_details)
+        print(instance_pib_details.status)
+
         if instance_pib_details.status == PibTranslateStatusChoices.in_progress:
             return Response({"detail": "Translation already in progress"}, status=400)
 
