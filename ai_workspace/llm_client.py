@@ -175,7 +175,7 @@ class LLMClient:
         if full_text:
             try:
                 return json.loads(full_text)['translated_result'],0
-            except json.JSONDecodeError::
+            except json.JSONDecodeError:
                 return full_text,0
         return full_text,0
 
