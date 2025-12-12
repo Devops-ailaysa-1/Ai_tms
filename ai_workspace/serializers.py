@@ -2016,41 +2016,7 @@ class TaskPibDetailsSerializer(serializers.ModelSerializer):
             data.pop("source_json", None)
 
         return data
-
-    def create(self, validated_data):
-        task = validated_data.get("task")
-
-        
-        file_path = task.file.file.path
-        with open(file_path, "r") as fp:
-            json_data = json.load(fp)
-
-        
-        instance, created = TaskPibDetails.objects.get_or_create(
-            task=task,
-            defaults={"source_json": json_data}
-        )
-
-       
-        if not created:
-            return instance
-
-       
-        from ai_staff.models import AdaptiveSystemPrompt
-        from ai_auth.tasks import task_create_and_update_pib_news_detail
-
-        prompt_obj = AdaptiveSystemPrompt.objects.filter(task_name="translation_pib").first()
-        if prompt_obj:
-            new_prompt = prompt_obj.prompt.format(
-                source_language=task.job.source_language,
-                target_language=task.job.target_language
-            )
-
-            task_create_and_update_pib_news_detail.apply_async(
-                (str(instance.uid), new_prompt, json_data)
-            )
-
-        return instance
+	
 
     def update(self, instance, validated_data):
         target_json = validated_data.get("target_json")
