@@ -711,6 +711,7 @@ def project_analysis_property(project_id, retries=0, max_retries=3):
     '''
     This task is to execute project analysis property for the tasks
     '''
+    print("Calling pib project for analysis")
     logger.info("Executing high-priority task")
     from ai_workspace.api_views import ProjectAnalysisProperty
     from ai_workspace.models import Project

@@ -41,6 +41,7 @@ from itertools import repeat
 from ai_workspace.models import TaskNewsDetails ,TaskNewsMT,PIBStory
 from ai_workspace.utils import federal_json_translate
 from rest_framework.exceptions import ValidationError
+from ai_workspace.enums import PibStoryCreationType
 logger = logging.getLogger('django')
 
 # class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -1093,7 +1094,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			"dateline": pib.dateline,
 			"created_at": pib.created_at,
 			"pib_task_uid": str(pib_task_details.uid),
-			"status": pib_task_details.status
+			"status": pib_task_details.status,
+			"story_creation_type": pib.story_creation_type,
 			# "source_json": pib_task_details.source_json,
 			# "target_json": pib_task_details.target_json,
 		}
@@ -1932,16 +1934,23 @@ class PIBStorySerializer(serializers.ModelSerializer):
             "ministry_department",
             "dateline",
             "body",
+            "story_creation_type",
             "project_details",
+			"sub_headlines",
         ]
+
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # If context has "for_file" flag → remove fields you don't want
-        if self.context.get("for_file", False):
-            self.fields.pop("headline")
-            self.fields.pop("body")
+        initial = getattr(self, "initial_data", None)
+
+        if initial:
+            creation_type = initial.get("story_creation_type")
+
+            if creation_type == PibStoryCreationType.FILE_UPLOAD:
+                self.fields.pop("headline", None)
+                self.fields.pop("body", None)
 
     def get_project_details(self, obj):
         if obj.project:
