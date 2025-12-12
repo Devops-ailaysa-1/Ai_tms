@@ -300,7 +300,7 @@ from docx.shared import Pt
 from htmldocx import HtmlToDocx
 import tempfile, os
 
-def generate_pib_docx(heading: str, story: str, base_filename: str, language=None):
+def generate_pib_docx(heading: str, story: str, base_filename: str, language=None, sub_headlines=[]):
     doc = Document()
     RTL_LANGS = ["ar", "ur", "fa", "he"]
     rtl_mode = language in RTL_LANGS
@@ -325,6 +325,18 @@ def generate_pib_docx(heading: str, story: str, base_filename: str, language=Non
         last_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
         doc.add_paragraph("")  # spacing
+        
+    if sub_headlines:
+        for count, sub_headline in enumerate(sub_headlines):
+            heading_html = f"<h2>{sub_headline[f'{count}'].strip()}</h2>"
+            html_parser.add_html_to_document(heading_html, doc)
+
+            # center last paragraph (the heading)
+            last_para = doc.paragraphs[-1]
+            last_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    doc.add_paragraph("")
+    
 
     story = story.strip()
     has_html = any(tag in story.lower() for tag in ["<p", "<b", "<i", "<u", "<strong", "<em"])
