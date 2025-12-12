@@ -242,7 +242,10 @@ def search_wikipedia(search_term,lang):
         "list": "search",
         "srsearch": search_term
     }
-    search_response = requests.get(endpoint, params=search_params)
+    headers = {
+        "User-Agent": "Ailaysa-Translation-Service/1.0 (contact: support@ailaysa.com)"
+    }
+    search_response = requests.get(endpoint, params=search_params,headers=headers)
     search_data = search_response.json()
     search_results = search_data['query']['search']
     
@@ -256,7 +259,7 @@ def search_wikipedia(search_term,lang):
             "titles": title
         }
         URL=f"https://{lang}.wikipedia.org/wiki/{title}"
-        page_response = requests.get(endpoint, params=page_params)
+        page_response = requests.get(endpoint, params=page_params,headers=headers)
         page_data = page_response.json()
         page_id = list(page_data['query']['pages'].keys())[0]
         content = page_data['query']['pages'][page_id]['extract']
