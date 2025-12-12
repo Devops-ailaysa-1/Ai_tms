@@ -4967,7 +4967,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         print("file_data")
         print(file_data)
         name = f"{uuid.uuid4()}.json"
-
+        print(file_data)
         json_content = json.dumps(file_data, ensure_ascii=False, indent=2)
         im_file = DJFile(ContentFile(json_content), name=name)
 
@@ -4979,8 +4979,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         mt_engine = AilaysaSupportedMtpeEngines.objects.get(name='PIB_Translator')
             
         for task in tasks:
-            print(creation_type, "This is creation type")
-            if creation_type is None or creation_type == PibStoryCreationType.FILE_UPLOAD:
+            if creation_type == PibStoryCreationType.FILE_UPLOAD:
                 json_data = None
             else:
                 file_path = task.file.file.path
@@ -5031,7 +5030,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         tar_langs = request.data.getlist("target_languages")
 
         if not src_lang or not tar_langs:
-            return Response({"error": "Source and target languages required"}, status=400)
+            return Response({"error": "Source and Target languages required"}, status=400)
 
         user = request.user
         user_1 = user.team.owner if (user.team and (user in user.team.get_project_manager)) else user
@@ -5042,6 +5041,8 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         story_creation_type = request.data.get("story_creation_type", None)
         if story_creation_type and story_creation_type == PibStoryCreationType.FILE_UPLOAD:
             files = request.FILES.getlist('files')
+            if not files:
+                return Response({"error": "files field is required"}, status=400)
 
         else:
             pib_data = PIBStorySerializer(pib).data
