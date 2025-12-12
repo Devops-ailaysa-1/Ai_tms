@@ -1766,7 +1766,8 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
         print(style_guidence)
  
         target_json = {}
-
+        print(json_data, "this is json data")
+        json_data.pop('sub_headlines')
         for key, message in json_data.items():
             result = []
             story_list = html_to_list(message)#.split("<p>") 
