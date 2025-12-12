@@ -1743,19 +1743,14 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
     task_pib_details_instance = TaskPibDetails.objects.get(uid=task_details_id)
     try:
         nebius_llm_client = LLMClient("nebius", ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "") 
-
-        print(json_data)
-
+ 
         story = json_data['story']
+        print("story",story)
 
         style_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_style").prompt
         pib_stage_1_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_1").prompt
         pib_stage_2_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_2").prompt
-
-        print(pib_stage_1_prompt)
-        print("-------------------------")
-        print(pib_stage_2_prompt)
-
+ 
         source_language = task_pib_details_instance.task.job.source_language.language
         target_language = task_pib_details_instance.task.job.target_language.language
         style_prompt = style_prompt.format(target_language = target_language)
@@ -1763,15 +1758,14 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
         #style_guidence ,usage_style= nebius_llm_client._handle_nebius(messages=story, system_instruction=style_prompt) #_handle_vertex_ai_pib
 
         style_guidence ,usage_style= nebius_llm_client._handle_vertex_ai_pib(messages=story, system_instruction=style_prompt)
-        print(style_guidence)
  
         target_json = {}
         print(json_data, "this is json data")
         json_data.pop('sub_headlines')
         for key, message in json_data.items():
             result = []
-            story_list = html_to_list(message)#.split("<p>") 
-            #print("story_list",story_list)
+            story_list = html_to_list(message) 
+  
             usage_story = 0
             for count, story_para in tqdm(enumerate(story_list)):
                 if story_para.strip():
@@ -1779,12 +1773,11 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                         direct_instruction = (
                         f"Translate this {source_language} text into {target_language}. "
                         f"Always output ONLY the translation. "
-                        f"Do not ask for clarification even if the input is short."
-                    )
+                        f"Do not ask for clarification even if the input is short.")
                         #translation, usage = nebius_llm_client._handle_nebius( system_instruction=direct_instruction, messages=story_para )
 
                         translation, usage = nebius_llm_client._handle_vertex_ai_pib( system_instruction=direct_instruction, messages=story_para )
-                        print(translation)
+ 
                         result.append(translation)
                     else:
                         # translation ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
@@ -1792,11 +1785,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                         
                         translation ,usage= nebius_llm_client._handle_vertex_ai_pib(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
                                                                             messages = story_para )
-                        
-                        print(translation)
-
-
-                        
+ 
                         usage_story = usage_story+usage
                         if count != 0:
                             trns_text  = f"""previous_paragraph: {story_list[count-1]}\n\nsource_text: {story_para}\n\ntarget_text: {translation}"""
@@ -1816,11 +1805,12 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                         result.append(trns_2_resp)
                 else:
                     result.append("<br>")
- 
+
+            print("result",result)
             trans_story = "".join(f"<p>{para}</p>" for para in result)
             target_json[key] = trans_story
-            
-        print(target_json)
+
+         
         task_pib_details_instance.target_json = target_json
         task_pib_details_instance.status = PibTranslateStatusChoices.completed
         task_pib_details_instance.save()

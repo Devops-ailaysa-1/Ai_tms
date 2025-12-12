@@ -158,24 +158,25 @@ class LLMClient:
         return output_stream ,usage
     
     @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
-    def _handle_vertex_ai_pib(self, messages, system_instruction, max_tokens=60000):
+    def _handle_vertex_ai_pib(  messages, system_instruction ):
 
         print("clled vetex ai")
-        
-        if is_numbers_or_punctuation(messages):
-            return messages, 0
-        
-    
-
+ 
         client = genai.Client(project = AI_RESEARCH_VERTEX_AI,  vertexai=True, location=AI_RESEARCH_VERTEX_AI_LOCATION,credentials = credentials_nebius )
 
-        generate_content_config = types.GenerateContentConfig(temperature = 1, top_p = 0.95, system_instruction = system_instruction)
+        generate_content_config = types.GenerateContentConfig(temperature = 1, top_p = 0.95,  system_instruction = system_instruction,
+                                                            response_mime_type = response_mime_type,  response_schema = response_schema)
         full_text = ""
-
-        for chunk in client.models.generate_content_stream(model = AI_RESEARCH_VERTEX_AI_MODEL_LINK, contents = messages,  config = generate_content_config):
-             if chunk.text:
-                 full_text+=chunk.text
-        print(full_text)
+        for chunk in client.models.generate_content_stream(model = AI_RESEARCH_VERTEX_AI_MODEL_LINK,  contents = messages, config = generate_content_config):
+            
+            
+            if chunk.text:
+                full_text+=chunk.text
+        if full_text:
+            try:
+                return json.loads(full_text)['translated_result'],0
+            except json.JSONDecodeError::
+                return full_text,0
         return full_text,0
 
 
