@@ -2908,6 +2908,7 @@ def download_pib(request):
         data = obj.pib_task.last().target_json if output_type == 'ORIGINAL' else obj.pib_task.first().tasknewspibdetail.first().mt_raw_json
         heading = data.get("heading", "")
         story = data.get("story", "")
+        sub_headlines = data.get("sub_headlines", [])
         
         source_json = obj.pib_task.last().source_json
         file_cont = source_json.get('heading')
@@ -2920,7 +2921,8 @@ def download_pib(request):
             heading=heading,
             story=story,
             base_filename=filename,
-            language = target_language_code
+            language = target_language_code,
+            sub_headlines=sub_headlines
         )
 
         # return the file
