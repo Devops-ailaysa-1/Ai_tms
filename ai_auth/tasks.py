@@ -1763,6 +1763,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
         #style_guidence ,usage_style= nebius_llm_client._handle_nebius(messages=story, system_instruction=style_prompt) #_handle_vertex_ai_pib
 
         style_guidence ,usage_style= nebius_llm_client._handle_vertex_ai_pib(messages=story, system_instruction=style_prompt)
+        print(style_guidence)
  
         target_json = {}
 
@@ -1782,6 +1783,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                         #translation, usage = nebius_llm_client._handle_nebius( system_instruction=direct_instruction, messages=story_para )
 
                         translation, usage = nebius_llm_client._handle_vertex_ai_pib( system_instruction=direct_instruction, messages=story_para )
+                        print(translation)
                         result.append(translation)
                     else:
                         # translation ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
@@ -1789,6 +1791,8 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                         
                         translation ,usage= nebius_llm_client._handle_vertex_ai_pib(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
                                                                             messages = story_para )
+                        
+                        print(translation)
 
 
                         
@@ -1814,7 +1818,8 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
  
             trans_story = "".join(f"<p>{para}</p>" for para in result)
             target_json[key] = trans_story
-
+            
+        print(target_json)
         task_pib_details_instance.target_json = target_json
         task_pib_details_instance.status = PibTranslateStatusChoices.completed
         task_pib_details_instance.save()
