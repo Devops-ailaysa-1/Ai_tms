@@ -159,6 +159,11 @@ class LLMClient:
     
     @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
     def _handle_vertex_ai_pib(self,messages, system_instruction ):
+        print("messages")
+        print(messages)
+        print("system_instruction")
+        print(system_instruction)
+
 
         response_mime_type="application/json"
         response_schema=genai.types.Schema(

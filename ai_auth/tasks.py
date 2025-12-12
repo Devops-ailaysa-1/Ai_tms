@@ -1745,8 +1745,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
         nebius_llm_client = LLMClient("nebius", ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "") 
  
         story = json_data['story']
-        print("story",story)
-
+ 
         style_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_style").prompt
         pib_stage_1_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_1").prompt
         pib_stage_2_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_2").prompt
@@ -1760,7 +1759,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
         style_guidence ,usage_style= nebius_llm_client._handle_vertex_ai_pib(messages=story, system_instruction=style_prompt)
  
         target_json = {}
-        print(json_data, "this is json data")
+         
         json_data.pop('sub_headlines')
         for key, message in json_data.items():
             result = []
@@ -1798,15 +1797,13 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                         trns_2_resp ,usage= nebius_llm_client._handle_vertex_ai_pib(system_instruction=pib_stage_2_prompt.format(source_language = source_language,target_language=target_language), 
                                                                             messages = trns_text )
                         
-
-
+ 
                         usage_story = usage_story+usage
                         
                         result.append(trns_2_resp)
                 else:
                     result.append("<br>")
-
-            print("result",result)
+  
             trans_story = "".join(f"<p>{para}</p>" for para in result)
             target_json[key] = trans_story
 
