@@ -1754,8 +1754,10 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
         target_language = task_pib_details_instance.task.job.target_language.language
         style_prompt = style_prompt.format(target_language = target_language)
  
-        style_guidence ,usage_style= nebius_llm_client._handle_nebius(messages=story, system_instruction=style_prompt)
+        #style_guidence ,usage_style= nebius_llm_client._handle_nebius(messages=story, system_instruction=style_prompt) #_handle_vertex_ai_pib
 
+        style_guidence ,usage_style= nebius_llm_client._handle_vertex_ai_pib(messages=story, system_instruction=style_prompt)
+ 
         target_json = {}
 
         for key, message in json_data.items():
@@ -1771,19 +1773,33 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                         f"Always output ONLY the translation. "
                         f"Do not ask for clarification even if the input is short."
                     )
-                        translation, usage = nebius_llm_client._handle_nebius( system_instruction=direct_instruction, messages=story_para )
+                        #translation, usage = nebius_llm_client._handle_nebius( system_instruction=direct_instruction, messages=story_para )
+
+                        translation, usage = nebius_llm_client._handle_vertex_ai_pib( system_instruction=direct_instruction, messages=story_para )
                         result.append(translation)
                     else:
-                        translation ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
+                        # translation ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
+                                                                            # messages = story_para )
+                        
+                        translation ,usage= nebius_llm_client._handle_vertex_ai_pib(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
                                                                             messages = story_para )
+
+
+                        
                         usage_story = usage_story+usage
                         if count != 0:
                             trns_text  = f"""previous_paragraph: {story_list[count-1]}\n\nsource_text: {story_para}\n\ntarget_text: {translation}"""
                         else:
                             trns_text  = f"""source_text: {story_para}\n\ntarget_text: {translation}"""
                         
-                        trns_2_resp ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_2_prompt.format(source_language = source_language,target_language=target_language), 
+                        # trns_2_resp ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_2_prompt.format(source_language = source_language,target_language=target_language), 
+                                                                            # messages = trns_text )
+
+                        trns_2_resp ,usage= nebius_llm_client._handle_vertex_ai_pib(system_instruction=pib_stage_2_prompt.format(source_language = source_language,target_language=target_language), 
                                                                             messages = trns_text )
+                        
+
+
                         usage_story = usage_story+usage
                         
                         result.append(trns_2_resp)
