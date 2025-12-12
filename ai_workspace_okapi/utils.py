@@ -853,3 +853,34 @@ def save_simple_file(http_response, output_file_path):
 
     return os.path.abspath(output_file_path)
 
+
+def pib_files_project_create_and_update_pib_news_details(user, task,source_string, source_language, target_language, stage_1_prompt):
+    from tqdm import tqdm
+    from ai_workspace.adaptive import PIBStyleAnalysis
+    from ai_workspace.models import TaskStyle
+    api_client = LLMClient(provider = "nebius",model=settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB,style="")
+    
+    try:
+        
+        style_create = PIBStyleAnalysis(user=user,task=task,api_client=api_client, target_language=target_language)
+        style_create.process(all_paragraph=source_string)
+    except Exception as e:
+        logger.error(f"Error in style analysis for task {task.id}: {e}",exc_info=True)
+        task.adaptive_file_translate_status = "FAILED"
+        task.save()
+    
+    task_style_prompt = TaskStyle.objects.get(task = task)
+    if task_style_prompt:
+        llm_client_obj = LLMClient("pib_nebius", settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "")
+        formated_stage_1_prompt = stage_1_prompt.prompt.format(style_prompt="{style_promt}",source_language=source_language, target_language=target_language)
+        
+        result = []
+        pib_news_list = source_string.split("\n\n")
+        
+        for count, text_para in tqdm(enumerate(pib_news_list)):
+            if text_para:
+                translation_stage_1, usage = llm_client_obj._handle_nebius(messages=text_para,
+                                                    system_instruction=formated_stage_1_prompt.replace("{style_promt}",task_style_prompt.style_guide))
+                result.append(translation_stage_1)
+        
+    return "\n\n".join(result)
