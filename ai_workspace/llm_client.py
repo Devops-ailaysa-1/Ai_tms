@@ -159,6 +159,17 @@ class LLMClient:
     
     @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
     def _handle_vertex_ai_pib(self,messages, system_instruction ):
+
+        response_mime_type="application/json"
+        response_schema=genai.types.Schema(
+                    type = genai.types.Type.OBJECT,
+                    required = ["translated_result"],
+                    properties = {
+                        "translated_result": genai.types.Schema(
+                            type = genai.types.Type.STRING,
+                        ),
+                    },
+                )
  
         client = genai.Client(project = AI_RESEARCH_VERTEX_AI,  vertexai=True, location=AI_RESEARCH_VERTEX_AI_LOCATION,credentials = credentials_nebius )
 
