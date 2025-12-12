@@ -1094,7 +1094,8 @@ class VendorDashBoardSerializer(serializers.ModelSerializer):
 			"dateline": pib.dateline,
 			"created_at": pib.created_at,
 			"pib_task_uid": str(pib_task_details.uid),
-			"status": pib_task_details.status
+			"status": pib_task_details.status,
+			"story_creation_type": pib.story_creation_type,
 			# "source_json": pib_task_details.source_json,
 			# "target_json": pib_task_details.target_json,
 		}
@@ -1935,6 +1936,7 @@ class PIBStorySerializer(serializers.ModelSerializer):
             "body",
             "story_creation_type",
             "project_details",
+			"sub_headlines",
         ]
 
 
