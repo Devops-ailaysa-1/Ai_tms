@@ -158,9 +158,7 @@ class LLMClient:
         return output_stream ,usage
     
     @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
-    def _handle_vertex_ai_pib(  messages, system_instruction ):
-
-        print("clled vetex ai")
+    def _handle_vertex_ai_pib(self,messages, system_instruction ):
  
         client = genai.Client(project = AI_RESEARCH_VERTEX_AI,  vertexai=True, location=AI_RESEARCH_VERTEX_AI_LOCATION,credentials = credentials_nebius )
 
@@ -168,8 +166,7 @@ class LLMClient:
                                                             response_mime_type = response_mime_type,  response_schema = response_schema)
         full_text = ""
         for chunk in client.models.generate_content_stream(model = AI_RESEARCH_VERTEX_AI_MODEL_LINK,  contents = messages, config = generate_content_config):
-            
-            
+     
             if chunk.text:
                 full_text+=chunk.text
         if full_text:
