@@ -171,12 +171,12 @@ class LLMClient:
 
         generate_content_config = types.GenerateContentConfig(temperature = 1, top_p = 0.95,
                                                               system_instruction = system_instruction)
-        
+        full_text = ""
         for chunk in client.models.generate_content_stream(model = AI_RESEARCH_VERTEX_AI_MODEL_LINK,
                                                    contents = messages,
                                                    config = generate_content_config):
              
-             full_text = ""
+             
              if chunk.text:
                  full_text+=chunk.text
     
