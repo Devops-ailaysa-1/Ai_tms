@@ -1,6 +1,7 @@
 import json
 import backoff
 from google.genai import types
+from google import genai
 from django.conf import settings
 import logging
 import requests
@@ -18,10 +19,17 @@ OPENAI_API_KEY = settings.OPENAI_API_KEY
 ALTERNATE_GEMINI_MODEL = settings.ALTERNATE_GEMINI_MODEL
 ADAPTIVE_STYLE_LLM_MODEL =  settings.ALTERNATE_GEMINI_MODEL
 
-# AI_RESEARCH_VERTEX_AI_MODEL_LINK = settings.AI_RESEARCH_VERTEX_AI_MODEL_LINK
-# AI_RESEARCH_VERTEX_AI_LOCATION = settings.AI_RESEARCH_VERTEX_AI_LOCATION
-# AI_RESEARCH_VERTEX_AI_JSON_PATH =  settings.AI_RESEARCH_VERTEX_AI_JSON_PATH
-# AI_RESEARCH_VERTEX_AI = settings.AI_RESEARCH_VERTEX_AI
+AI_RESEARCH_VERTEX_AI_MODEL_LINK = settings.AI_RESEARCH_VERTEX_AI_MODEL_LINK
+AI_RESEARCH_VERTEX_AI_LOCATION = settings.AI_RESEARCH_VERTEX_AI_LOCATION
+AI_RESEARCH_VERTEX_AI_JSON_PATH =  settings.AI_RESEARCH_VERTEX_AI_JSON_PATH
+AI_RESEARCH_VERTEX_AI = settings.AI_RESEARCH_VERTEX_AI
+
+print("AI_RESEARCH_VERTEX_AI_MODEL_LINK",AI_RESEARCH_VERTEX_AI_MODEL_LINK)
+print("AI_RESEARCH_VERTEX_AI_LOCATION",AI_RESEARCH_VERTEX_AI_LOCATION)
+print("AI_RESEARCH_VERTEX_AI_JSON_PATH",AI_RESEARCH_VERTEX_AI_JSON_PATH)
+print("AI_RESEARCH_VERTEX_AI",AI_RESEARCH_VERTEX_AI)
+
+
 
 NEBIUS_API_KEY = os.getenv('NEBIUS_API_KEY')
 NEBIUS_API_URL = os.getenv('NEBIUS_API_URL')
@@ -37,7 +45,7 @@ def is_numbers_or_punctuation(text: str) -> bool:
     return all(c in allowed for c in text)
 
 
-#credentials_nebius = service_account.Credentials.from_service_account_file(AI_RESEARCH_VERTEX_AI_MODEL_LINK,scopes=["https://www.googleapis.com/auth/cloud-platform"])
+credentials_nebius = service_account.Credentials.from_service_account_file(AI_RESEARCH_VERTEX_AI_MODEL_LINK,scopes=["https://www.googleapis.com/auth/cloud-platform"])
 
 safety_settings=[
             types.SafetySetting(
@@ -76,7 +84,7 @@ class LLMClient:
                 self.client = openai
 
             elif self.provider == "gemini":
-                from google import genai
+                
 
                 client = genai.Client(api_key=GOOGLE_GEMINI_API)
                 self.client = client
@@ -149,30 +157,30 @@ class LLMClient:
         output_stream = output_stream.strip()
         return output_stream ,usage
     
-    # @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
-    # def _handle_vertex_ai_pib(self, messages, system_instruction, max_tokens=60000):
+    @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
+    def _handle_vertex_ai_pib(self, messages, system_instruction, max_tokens=60000):
         
-    #     if is_numbers_or_punctuation(messages):
-    #         return messages,0
+        if is_numbers_or_punctuation(messages):
+            return messages,0
         
     
 
-    #     client = genai.Client(project = AI_RESEARCH_VERTEX_AI,  vertexai=True, location='us-central1',credentials = credentials_nebius )
+        client = genai.Client(project = AI_RESEARCH_VERTEX_AI,  vertexai=True, location='us-central1',credentials = credentials_nebius )
 
-    #     generate_content_config = types.GenerateContentConfig(temperature = 1, top_p = 0.95,
-    #                                                           system_instruction = system_instruction)
+        generate_content_config = types.GenerateContentConfig(temperature = 1, top_p = 0.95,
+                                                              system_instruction = system_instruction)
         
-    #     for chunk in client.models.generate_content_stream(model = AI_RESEARCH_VERTEX_AI_MODEL_LINK,
-    #                                                contents = messages,
-    #                                                config = generate_content_config):
+        for chunk in client.models.generate_content_stream(model = AI_RESEARCH_VERTEX_AI_MODEL_LINK,
+                                                   contents = messages,
+                                                   config = generate_content_config):
              
-    #          full_text = ""
-    #          if chunk.text:
-    #              full_text+=chunk.text
+             full_text = ""
+             if chunk.text:
+                 full_text+=chunk.text
              
  
         
-    #     return full_text
+        return full_text
 
 
 
@@ -281,7 +289,7 @@ class LLMClient:
  
         if messages and system_instruction:
 
-            from google import genai
+ 
             client = genai.Client(api_key = GOOGLE_GEMINI_API)
 
             contents = [
