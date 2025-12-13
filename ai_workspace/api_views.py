@@ -5019,37 +5019,6 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
             "task_uid": instance_pib_details.uid
         }, status=200)
 
-    @action(detail=False, methods=["post"], url_path="file_translate")
-    def start_translation(self, request):
-        pib_task_id = request.data.get("pib_task_id")
-
-        if not pib_task_id:
-            return Response({"error": "pib_task_id required"}, status=400)
-        
-        task = get_object_or_404(Task, id=pib_task_id)
-        segments = list(task.document.segments.all())
-        avg_seg_trans = 20
-
-        def chunk_list(data, size):
-            for i in range(0, len(data), size):
-                yield data[i:i + size]
-
-        chunks = list(chunk_list(segments, avg_seg_trans))
-
-        from .models import PibFileSegmentChunk
-
-        for index, chunk in enumerate(chunks):
-            PibFileSegmentChunk.objects.create(
-                task=task,
-                chunk_index=index,
-                segment_ids=[seg.id for seg in chunk],
-                status=PibFileSegmentChunk.Status.PENDING
-            )
-
-        # return Response({
-        #     "detail": "Translation started",
-        #     "task_uid": instance_pib_details.uid
-        # }, status=200)
 
         
     def create(self, request):
