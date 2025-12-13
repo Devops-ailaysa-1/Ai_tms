@@ -332,7 +332,7 @@ class LLMClient:
 def gemini_mp3(speech_file):
     with open(speech_file, 'rb') as fd:
         content = fd.read()
-    client = genai.Client(project='ai-staging-406408',vertexai=True,location=AI_RESEARCH_VERTEX_AI_LOCATION)
+    client = genai.Client(api_key = GOOGLE_GEMINI_API)
     
     generate_content_config = types.GenerateContentConfig( thinking_config=types.ThinkingConfig(thinking_budget=256),
                                                           response_mime_type="application/json",
@@ -361,10 +361,14 @@ def gemini_mp3(speech_file):
         if chunk.text:
             full_text+=chunk.text 
 
-    all_subtitle = ""
+    html_parts = []
+
     for i in json.loads(full_text)["result"]:
-        all_subtitle+=str(i["timestamp"])+"\n"
-        all_subtitle+=str(i["transcription_result"])+"\n\n"
+        html_parts.append(
+            f"<p>{i['timestamp']}<br>{i['transcription_result']}</p>"
+        )
+
+    all_subtitle = "".join(html_parts)
     
     return all_subtitle
 

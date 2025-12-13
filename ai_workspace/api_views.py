@@ -2507,6 +2507,7 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
     gcs_uri = os.getenv("BUCKET_URL") + filename
     transcript = ''
     if not ai_user.is_pib:
+        print("not in PIB")
         sample_hertz = hertz if hertz >= 48000 else 8000
         client = speech.SpeechClient()
         audio = speech.RecognitionAudio(uri=gcs_uri)
