@@ -115,6 +115,8 @@ import uuid
 from ai_auth.tasks import write_doc_json_file,record_api_usage, create_doc_and_write_seg_to_db, task_create_and_update_pib_news_detail
 from ai_workspace.filters import ProjectTypeSearchFilter
 from rest_framework.decorators import action
+from ai_workspace.llm_client import gemini_mp3
+
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -2504,30 +2506,38 @@ def transcribe_long_file(speech_file,source_code,filename,obj,length,user,hertz)
 
     gcs_uri = os.getenv("BUCKET_URL") + filename
     transcript = ''
-    sample_hertz = hertz if hertz >= 48000 else 8000
-    client = speech.SpeechClient()
-    audio = speech.RecognitionAudio(uri=gcs_uri)
+    if not ai_user.is_pib:
+        sample_hertz = hertz if hertz >= 48000 else 8000
+        client = speech.SpeechClient()
+        audio = speech.RecognitionAudio(uri=gcs_uri)
 
-    config =  speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=sample_hertz,language_code=source_code, enable_automatic_punctuation=True,)
+        config =  speech.RecognitionConfig(encoding=speech.RecognitionConfig.AudioEncoding.MP3,sample_rate_hertz=sample_hertz,language_code=source_code, enable_automatic_punctuation=True,)
 
 
-    # Detects speech in the audio file and call the API
-    operation = client.long_running_recognize(config=config, audio=audio)
-    response = operation.result(timeout=10000)
-    for result in response.results:
-        #concatenate the results
-        transcript += result.alternatives[0].transcript
-    
-    # Take the file_length from response
-    file_length = int(response.total_billed_time.seconds)
+        # Detects speech in the audio file and call the API
+        operation = client.long_running_recognize(config=config, audio=audio)
+        response = operation.result(timeout=10000)
+        for result in response.results:
+            #concatenate the results
+            transcript += result.alternatives[0].transcript
+        
+        # Take the file_length from response
+        file_length = int(response.total_billed_time.seconds)
+        #Record API Usage
+        record_api_usage.apply_async(("GCP","Transcription",ai_user.uid,ai_user.email,file_length), queue='low-priority')
 
-    #Delete long audio file in bucket
+
+        #Delete long audio file in bucket
+    else:
+        print("processing in PIB")
+        transcript = gemini_mp3(speech_file=speech_file)
+
+
     delete_blob(bucket_name, destination_blob_name)
 
-    #Record API Usage
-    record_api_usage.apply_async(("GCP","Transcription",ai_user.uid,ai_user.email,file_length), queue='low-priority')
-
+    
     #Save the transcripted_data in TaskTranscriptDetail model using TaskTranscriptDetailSerializer and return serializer.data
+    
     ser = TaskTranscriptDetailSerializer(data={"transcripted_text":transcript,"task":obj.id,"audio_file_length":length,"user":user.id})
     if ser.is_valid():
         ser.save()
@@ -5011,7 +5021,6 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
             instance_pib_details.save()
             logger.info(f'Successfully sent the task to celery: project-task-id : {task.id} and celery-task-id : {do_translate.id}')
         except Exception as e:
-            print(e)
             return Response({"error": str(e)}, status=500)
 
         return Response({

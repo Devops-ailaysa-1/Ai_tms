@@ -1721,144 +1721,273 @@ def html_to_list(text):
         return [text]
 
  
-def text_to_html(text):
-    text = text.split("\r\n")
-    print("text_to_html",text)
-    all_split = []
-    for i in text:
-        if i:
-            all_split.append(f"<p>{i}</p>" )
-        else:
-            all_split.append("<br>")
-    return "".join(all_split)
+def text_to_html(text: str) -> str:
+    # Normalize Windows line endings
+    text = text.replace("\r\n", "\n")
+
+    # Split into paragraphs on double newlines
+    paragraphs = re.split(r"\n\s*\n", text)
+
+    html_parts = []
+    for para in paragraphs:
+        para = para.strip()
+        if not para:
+            continue
+
+        # Inside a paragraph, single \n becomes <br>
+        para = para.replace("\n", "<br>")
+        html_parts.append(f"<p>{para}</p>")
+
+    return "".join(html_parts)
  
 
-
-@task(queue='high-priority')
+@task(queue="high-priority")
 def task_create_and_update_pib_news_detail(task_details_id, json_data, update=False):
     from ai_staff.models import AdaptiveSystemPrompt
-    ADAPTIVE_TRANSLATE_LLM_MODEL_PIB = settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB
-    from tqdm import tqdm
 
-    task_pib_details_instance = TaskPibDetails.objects.get(uid=task_details_id)
+    task_pib = TaskPibDetails.objects.get(uid=task_details_id)
+
     try:
-        nebius_llm_client = LLMClient("nebius", ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "") 
- 
-        story = json_data['story']
-        print("story",story)
+        llm = LLMClient("nebius", settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "")
 
-        style_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_style").prompt
-        pib_stage_1_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_1").prompt
-        pib_stage_2_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_2").prompt
- 
-        source_language = task_pib_details_instance.task.job.source_language.language
-        target_language = task_pib_details_instance.task.job.target_language.language
-        style_prompt = style_prompt.format(target_language = target_language)
- 
-        #style_guidence ,usage_style= nebius_llm_client._handle_nebius(messages=story, system_instruction=style_prompt) #_handle_vertex_ai_pib
+        source_language = task_pib.task.job.source_language.language
+        target_language = task_pib.task.job.target_language.language
 
-        style_guidence ,usage_style= nebius_llm_client._handle_vertex_ai_pib(messages=story, system_instruction=style_prompt)
- 
+        style_prompt = AdaptiveSystemPrompt.objects.get(
+            task_name="translation_pib_style"
+        ).prompt.format(target_language=target_language)
+
+        stage1_prompt = AdaptiveSystemPrompt.objects.get(
+            task_name="translation_pib_stage_1"
+        ).prompt
+
+        stage2_prompt = AdaptiveSystemPrompt.objects.get(
+            task_name="translation_pib_stage_2"
+        ).prompt
+
+        # -------- Style Guidance --------
+        style_guidance, _ = llm._handle_vertex_ai_pib(
+            messages=json_data["story"],
+            system_instruction=style_prompt,
+        )
+
         target_json = {}
-        print(json_data, "this is json data")
-        check_subheading = json_data.get('sub_headlines', None)
-        if not check_subheading:
-            json_data.pop('sub_headlines')
-            
-        for key, message in json_data.items():
-            if key == "sub_headlines" and message:
-                temp_sub_headlines = []
-                for count, sub_headline in enumerate(message):
-                    if sub_headline[f"{count}"].strip():
-                        if len(sub_headline[f"{count}"].split()) <= 3:
-                            direct_instruction = (
-                            f"Translate this {source_language} text into {target_language}. "
-                            f"Always output ONLY the translation. "
-                            f"Do not ask for clarification even if the input is short."
-                        )
-                            #translation, usage = nebius_llm_client._handle_nebius( system_instruction=direct_instruction, messages=story_para )
 
-                            translation, usage = nebius_llm_client._handle_vertex_ai_pib( system_instruction=direct_instruction, messages=sub_headline[f"{count}"] )
-                            print(translation)
-                            result.append(translation)
-                        else:
-                            # translation ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
-                                                                                # messages = story_para )
-                            
-                            translation ,usage= nebius_llm_client._handle_vertex_ai_pib(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
-                                                                                messages = sub_headline[f"{count}"] )
-                            
-                            print(translation)
+        # -------- Helper Functions --------
+        def translate_short(text):
+            instruction = (
+                f"Translate this {source_language} text into {target_language}. "
+                f"Always output ONLY the translation. "
+                f"Do not ask for clarification even if the input is short."
+            )
+            return llm._handle_vertex_ai_pib(
+                system_instruction=instruction,
+                messages=text,
+            )[0]
 
-                            usage_story = usage_story+usage
-                            
-                            temp_sub_headlines.append({f"{count}":translation})
-                    else:
-                        temp_sub_headlines.append({f"{count}":"<br>"})
-                    
-                    
-    
-                # trans_story = "".join(f"<p>{para.values()[0]}</p>" for para in temp_sub_headlines)
-                trans_story = "".join(f"<p>{para[f'{count}']}</p>" for count, para in enumerate(temp_sub_headlines))
-                target_json[key] = trans_story
-            else:
-                result = []
-                story_list = html_to_list(message)#.split("<p>") 
-                #print("story_list",story_list)
-                usage_story = 0
-                for count, story_para in tqdm(enumerate(story_list)):
-                    if story_para.strip():
-                        if len(story_para.split()) <= 3:
-                            direct_instruction = (
-                            f"Translate this {source_language} text into {target_language}. "
-                            f"Always output ONLY the translation. "
-                            f"Do not ask for clarification even if the input is short."
-                        )
-                            #translation, usage = nebius_llm_client._handle_nebius( system_instruction=direct_instruction, messages=story_para )
+        def translate_long(text, prev_text=None):
+            first_pass, _ = llm._handle_vertex_ai_pib(
+                system_instruction=stage1_prompt.format(
+                    source_language=source_language,
+                    target_language=target_language,
+                    style_prompt=style_guidance,
+                ),
+                messages=text,
+            )
 
-                            translation, usage = nebius_llm_client._handle_vertex_ai_pib( system_instruction=direct_instruction, messages=story_para )
-                            print(translation)
-                            result.append(translation)
-                        else:
-                            # translation ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
-                                                                                # messages = story_para )
-                            
-                            translation ,usage= nebius_llm_client._handle_vertex_ai_pib(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
-                                                                                messages = story_para )
-                            
-                            print(translation)   
-                            usage_story = usage_story+usage
-                            if count != 0:
-                                trns_text  = f"""previous_paragraph: {story_list[count-1]}\n\nsource_text: {story_para}\n\ntarget_text: {translation}"""
-                            else:
-                                trns_text  = f"""source_text: {story_para}\n\ntarget_text: {translation}"""
-                            
-                            # trns_2_resp ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_2_prompt.format(source_language = source_language,target_language=target_language), 
-                                                                                # messages = trns_text )
+            refinement_input = (
+                f"previous_paragraph: {prev_text}\n\n"
+                f"source_text: {text}\n\n"
+                f"target_text: {first_pass}"
+                if prev_text
+                else f"source_text: {text}\n\ntarget_text: {first_pass}"
+            )
 
-                            trns_2_resp ,usage= nebius_llm_client._handle_vertex_ai_pib(system_instruction=pib_stage_2_prompt.format(source_language = source_language,target_language=target_language), 
-                                                                                messages = trns_text )
-                            
+            final_text, _ = llm._handle_vertex_ai_pib(
+                system_instruction=stage2_prompt.format(
+                    source_language=source_language,
+                    target_language=target_language,
+                ),
+                messages=refinement_input,
+            )
+            return final_text
 
+        def translate_paragraphs(paragraphs):
+            results = []
+            for idx, para in enumerate(paragraphs):
+                if not para.strip():
+                    results.append("<br>")
+                    continue
 
-                            usage_story = usage_story+usage
-                            
-                            result.append(trns_2_resp)
-                    else:
-                        result.append("<br>")
-    
-                trans_story = "".join(f"<p>{para}</p>" for para in result)
-                target_json[key] = trans_story
-            
-        print(target_json)
-        task_pib_details_instance.target_json = target_json
-        task_pib_details_instance.status = PibTranslateStatusChoices.completed
-        task_pib_details_instance.save()
-        task_news_pib_mt_instance = TaskNewsPIBMT.objects.get(task_pib_detail = task_pib_details_instance)
-        task_news_pib_mt_instance.mt_raw_json = target_json
-        task_news_pib_mt_instance.save()
+                if len(para.split()) <= 3:
+                    results.append(translate_short(para))
+                else:
+                    prev_para = paragraphs[idx - 1] if idx > 0 else None
+                    results.append(translate_long(para, prev_para))
+            return "".join(f"<p>{p}</p>" for p in results)
+
+        # -------- Process JSON --------
+        for key, value in json_data.items():
+            if key == "sub_headlines" and value:
+                translated = []
+                for idx, item in enumerate(value):
+                    text = item.get(str(idx), "").strip()
+                    if not text:
+                        translated.append({str(idx): "<br>"})
+                        continue
+
+                    translated_text = (
+                        translate_short(text)
+                        if len(text.split()) <= 3
+                        else translate_long(text)
+                    )
+                    translated.append({str(idx): translated_text})
+
+                target_json[key] = "".join(
+                    f"<p>{v[str(i)]}</p>" for i, v in enumerate(translated)
+                )
+
+            elif key != "sub_headlines":
+                paragraphs = html_to_list(value)
+                target_json[key] = translate_paragraphs(paragraphs)
+
+        # -------- Save Results --------
+        task_pib.target_json = target_json
+        task_pib.status = PibTranslateStatusChoices.completed
+        task_pib.save()
+
+        task_mt = TaskNewsPIBMT.objects.get(task_pib_detail=task_pib)
+        task_mt.mt_raw_json = target_json
+        task_mt.save()
+
     except Exception as e:
-        print(e)
-        task_pib_details_instance.status = PibTranslateStatusChoices.failed
-        task_pib_details_instance.save()
-        logger.error(f'Error in translation pib story: {e}')
+        task_pib.status = PibTranslateStatusChoices.failed
+        task_pib.save()
+        logger.exception("Error in PIB translation task",str(e))
+
+
+
+
+
+# @task(queue='high-priority')
+# def task_create_and_update_pib_news_detail(task_details_id, json_data, update=False):
+#     from ai_staff.models import AdaptiveSystemPrompt
+#     ADAPTIVE_TRANSLATE_LLM_MODEL_PIB = settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB
+#     from tqdm import tqdm
+
+#     task_pib_details_instance = TaskPibDetails.objects.get(uid=task_details_id)
+#     try:
+#         nebius_llm_client = LLMClient("nebius", ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "") 
+ 
+#         story = json_data['story']
+
+#         style_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_style").prompt
+#         pib_stage_1_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_1").prompt
+#         pib_stage_2_prompt = AdaptiveSystemPrompt.objects.get(task_name="translation_pib_stage_2").prompt
+ 
+#         source_language = task_pib_details_instance.task.job.source_language.language
+#         target_language = task_pib_details_instance.task.job.target_language.language
+#         style_prompt = style_prompt.format(target_language = target_language)
+ 
+#         #style_guidence ,usage_style= nebius_llm_client._handle_nebius(messages=story, system_instruction=style_prompt) #_handle_vertex_ai_pib
+
+#         style_guidence ,usage_style= nebius_llm_client._handle_vertex_ai_pib(messages=story, system_instruction=style_prompt)
+#         print("style_guidence")
+#         print(style_guidence)
+ 
+#         target_json = {}
+         
+#         check_subheading = json_data.get('sub_headlines', None)
+#         if not check_subheading:
+#             json_data.pop('sub_headlines')
+            
+#         for key, message in json_data.items():
+#             if key == "sub_headlines" and message:
+#                 temp_sub_headlines = []
+#                 for count, sub_headline in enumerate(message):
+#                     if sub_headline[f"{count}"].strip():
+#                         if len(sub_headline[f"{count}"].split()) <= 3:
+#                             direct_instruction = (
+#                             f"Translate this {source_language} text into {target_language}. "
+#                             f"Always output ONLY the translation. "
+#                             f"Do not ask for clarification even if the input is short."
+#                         )
+#                             #translation, usage = nebius_llm_client._handle_nebius( system_instruction=direct_instruction, messages=story_para )
+
+#                             translation, usage = nebius_llm_client._handle_vertex_ai_pib( system_instruction=direct_instruction, messages=sub_headline[f"{count}"] )
+                             
+#                             result.append(translation)
+#                         else:
+#                             # translation ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
+#                                                                                 # messages = story_para )
+                            
+#                             translation ,usage= nebius_llm_client._handle_vertex_ai_pib(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
+#                                                                                 messages = sub_headline[f"{count}"] )
+ 
+#                             usage_story = usage_story+usage
+                            
+#                             temp_sub_headlines.append({f"{count}":translation})
+#                     else:
+#                         temp_sub_headlines.append({f"{count}":"<br>"})
+ 
+#                 # trans_story = "".join(f"<p>{para.values()[0]}</p>" for para in temp_sub_headlines)
+#                 trans_story = "".join(f"<p>{para[f'{count}']}</p>" for count, para in enumerate(temp_sub_headlines))
+#                 target_json[key] = trans_story
+#             else:
+#                 result = []
+#                 story_list = html_to_list(message)#.split("<p>") 
+#                 print("story_list",len(story_list))
+#                 usage_story = 0
+#                 for count, story_para in tqdm(enumerate(story_list)):
+#                     if story_para.strip():
+#                         if len(story_para.split()) <= 3:
+#                             direct_instruction = (
+#                             f"Translate this {source_language} text into {target_language}. "
+#                             f"Always output ONLY the translation. "
+#                             f"Do not ask for clarification even if the input is short."
+#                         )
+#                             #translation, usage = nebius_llm_client._handle_nebius( system_instruction=direct_instruction, messages=story_para )
+
+#                             translation, usage = nebius_llm_client._handle_vertex_ai_pib( system_instruction=direct_instruction, messages=story_para )
+                             
+#                             result.append(translation)
+#                         else:
+#                             # translation ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
+#                                                                                 # messages = story_para )
+                            
+#                             translation ,usage= nebius_llm_client._handle_vertex_ai_pib(system_instruction=pib_stage_1_prompt.format(source_language = source_language,target_language=target_language,style_prompt=style_guidence),
+#                                                                                 messages = story_para )
+                            
+                              
+#                             usage_story = usage_story+usage
+#                             if count != 0:
+#                                 trns_text  = f"""previous_paragraph: {story_list[count-1]}\n\nsource_text: {story_para}\n\ntarget_text: {translation}"""
+#                             else:
+#                                 trns_text  = f"""source_text: {story_para}\n\ntarget_text: {translation}"""
+                            
+#                             # trns_2_resp ,usage= nebius_llm_client._handle_nebius(system_instruction=pib_stage_2_prompt.format(source_language = source_language,target_language=target_language), 
+#                                                                                 # messages = trns_text )
+
+#                             trns_2_resp ,usage= nebius_llm_client._handle_vertex_ai_pib(system_instruction=pib_stage_2_prompt.format(source_language = source_language,target_language=target_language), 
+#                                                                                 messages = trns_text )
+ 
+#                             usage_story = usage_story+usage
+                            
+#                             result.append(trns_2_resp)
+#                     else:
+#                         result.append("<br>")
+    
+#                 trans_story = "".join(f"<p>{para}</p>" for para in result)
+#                 target_json[key] = trans_story
+            
+ 
+#         task_pib_details_instance.target_json = target_json
+#         task_pib_details_instance.status = PibTranslateStatusChoices.completed
+#         task_pib_details_instance.save()
+#         task_news_pib_mt_instance = TaskNewsPIBMT.objects.get(task_pib_detail = task_pib_details_instance)
+#         task_news_pib_mt_instance.mt_raw_json = target_json
+#         task_news_pib_mt_instance.save()
+#     except Exception as e:
+#         task_pib_details_instance.status = PibTranslateStatusChoices.failed
+#         task_pib_details_instance.save()
+#         logger.error(f'Error in translation pib story: {e}')
