@@ -5018,6 +5018,8 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
             "detail": "Translation started",
             "task_uid": instance_pib_details.uid
         }, status=200)
+
+
         
     def create(self, request):
         from ai_workspace.models import ProjectFilesCreateType

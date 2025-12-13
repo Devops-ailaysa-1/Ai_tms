@@ -852,4 +852,3 @@ def save_simple_file(http_response, output_file_path):
         f.write(http_response.content)
 
     return os.path.abspath(output_file_path)
-
