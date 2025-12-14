@@ -1,6 +1,7 @@
 import json
 import backoff
 from google.genai import types
+from google.genai.types import  Part
 from google import genai
 from django.conf import settings
 import logging
@@ -9,6 +10,8 @@ import os
 from google.oauth2 import service_account
 logger = logging.getLogger('django')
 from ai_workspace import exceptions
+from ai_workspace.schema import pib_trans_result_schema,pib_transcription_result
+
 
 GOOGLE_GEMINI_API =  settings.GOOGLE_GEMINI_API
 GOOGLE_GEMINI_MODEL = settings.GOOGLE_GEMINI_MODEL
@@ -23,11 +26,6 @@ AI_RESEARCH_VERTEX_AI_MODEL_LINK = settings.AI_RESEARCH_VERTEX_AI_MODEL_LINK
 AI_RESEARCH_VERTEX_AI_LOCATION = settings.AI_RESEARCH_VERTEX_AI_LOCATION
 AI_RESEARCH_VERTEX_AI_JSON_PATH =  settings.AI_RESEARCH_VERTEX_AI_JSON_PATH
 AI_RESEARCH_VERTEX_AI = settings.AI_RESEARCH_VERTEX_AI
-
-print("AI_RESEARCH_VERTEX_AI_MODEL_LINK",AI_RESEARCH_VERTEX_AI_MODEL_LINK)
-print("AI_RESEARCH_VERTEX_AI_LOCATION",AI_RESEARCH_VERTEX_AI_LOCATION)
-print("AI_RESEARCH_VERTEX_AI_JSON_PATH",AI_RESEARCH_VERTEX_AI_JSON_PATH)
-print("AI_RESEARCH_VERTEX_AI",AI_RESEARCH_VERTEX_AI)
 
 
 
@@ -45,7 +43,8 @@ def is_numbers_or_punctuation(text: str) -> bool:
     return all(c in allowed for c in text)
 
 
-credentials_nebius = service_account.Credentials.from_service_account_file(AI_RESEARCH_VERTEX_AI_JSON_PATH,scopes=["https://www.googleapis.com/auth/cloud-platform"])
+credentials_nebius = service_account.Credentials.from_service_account_file(AI_RESEARCH_VERTEX_AI_JSON_PATH,
+                                                                           scopes=["https://www.googleapis.com/auth/cloud-platform"])
 
 safety_settings=[
             types.SafetySetting(
@@ -157,35 +156,31 @@ class LLMClient:
         output_stream = output_stream.strip()
         return output_stream ,usage
     
-    @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
-    def _handle_vertex_ai_pib(self,messages, system_instruction ):
+    @backoff.on_exception(backoff.expo,Exception,max_tries=3,jitter=backoff.full_jitter)
+    def _handle_vertex_ai_pib(self, messages, system_instruction):
 
-        response_mime_type="application/json"
-        response_schema=genai.types.Schema(
-                    type = genai.types.Type.OBJECT,
-                    required = ["translated_result"],
-                    properties = {
-                        "translated_result": genai.types.Schema(
-                            type = genai.types.Type.STRING,
-                        ),
-                    },
-                )
- 
-        client = genai.Client(project = AI_RESEARCH_VERTEX_AI,  vertexai=True, location=AI_RESEARCH_VERTEX_AI_LOCATION,credentials = credentials_nebius )
+        client = genai.Client(project=AI_RESEARCH_VERTEX_AI,vertexai=True,location=AI_RESEARCH_VERTEX_AI_LOCATION,credentials=credentials_nebius,)
 
-        generate_content_config = types.GenerateContentConfig(temperature = 1, top_p = 0.95,  system_instruction = system_instruction,
-                                                            response_mime_type = response_mime_type,  response_schema = response_schema)
-        full_text = ""
-        for chunk in client.models.generate_content_stream(model = AI_RESEARCH_VERTEX_AI_MODEL_LINK,  contents = messages, config = generate_content_config):
-     
+        config = types.GenerateContentConfig(temperature=1,top_p=0.95,system_instruction=system_instruction,response_mime_type="application/json",
+            response_schema=pib_trans_result_schema,)
+
+        full_text_parts = []
+
+        for chunk in client.models.generate_content_stream(model=AI_RESEARCH_VERTEX_AI_MODEL_LINK,contents=messages,config=config,):
             if chunk.text:
-                full_text+=chunk.text
-        if full_text:
-            try:
-                return json.loads(full_text)['translated_result'],0
-            except json.JSONDecodeError:
-                return full_text,0
-        return full_text,0
+                full_text_parts.append(chunk.text)
+
+        full_text = "".join(full_text_parts).strip()
+
+        if not full_text:
+            return "", 0
+        
+        try:
+            parsed = json.loads(full_text)
+            return parsed.get("translated_result", full_text), 0
+        except json.JSONDecodeError:
+            return full_text, 0
+
 
 
 
@@ -250,14 +245,12 @@ class LLMClient:
         stream_output = ""
  
         for chunk in client.models.generate_content_stream(model = model_name,  contents = contents, config = generate_content_config ):
-            
-
+    
             # logger.info(f"Chunk received: {chunk}")    
             if chunk.text==None:
                 raise  exceptions.EmptyChunkFoundException("Empty chunk found in stream output")
               
             stream_output+=chunk.text
-
 
         return stream_output
     
@@ -270,8 +263,6 @@ class LLMClient:
                     contents=contents,
                     config=generate_content_config,
                 )
-        # logger.info(f"------------------------------------------------------------------------------")
-        # logger.info(f"output response: {response}")
 
         if not response.candidates or not response.candidates[0].content or not response.candidates[0].content.parts:
             logger.error(f"No content parts found in response candidates, input text is :{contents}")
@@ -333,3 +324,54 @@ class LLMClient:
             return output_text , total_tokens
         else:
             return None
+
+
+#####
+
+
+def gemini_mp3(speech_file):
+    with open(speech_file, 'rb') as fd:
+        content = fd.read()
+    client = genai.Client(api_key = GOOGLE_GEMINI_API)
+    
+    generate_content_config = types.GenerateContentConfig( thinking_config=types.ThinkingConfig(thinking_budget=256),
+                                                          response_mime_type="application/json",
+                                                          response_schema=pib_transcription_result)
+
+    prompt = """
+    Process the audio file and generate a detailed transcription.
+    subtitle structure 
+    Example
+    1
+    00:00:02,000 --> 00:00:05,000
+    Good morning everyone
+    """
+    full_text = ""
+    for chunk in client.models.generate_content_stream(
+        config = generate_content_config,
+        model="gemini-2.5-flash",
+        contents=[
+            prompt,
+            Part.from_bytes(
+                data=content,
+                mime_type="audio/mp3",
+            ),
+        ],
+    ):
+        if chunk.text:
+            full_text+=chunk.text 
+
+    html_parts = []
+
+    for i in json.loads(full_text)["result"]:
+        html_parts.append(
+            f"<p>{i['timestamp']}<br>{i['transcription_result']}</p>"
+        )
+
+    all_subtitle = "".join(html_parts)
+    
+    return all_subtitle
+
+
+
+
