@@ -1150,11 +1150,11 @@ def mt_raw_update(task_id,segments):
                         if isAdaptiveTranslation:
                             # Adapting glossary
                             raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code, \
-                                                    user_id=task.owner_pk, cc=consumable_credits, task=task)
+                                                    user_id=task.owner_pk, cc=consumable_credits)
                             mt = replace_with_gloss(seg.source,raw_mt,task)
                         else:
                             # Without adapting glossary
-                            mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits, task=task)
+                            mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
                             raw_mt = mt
 
                         tags = get_tags(seg)
@@ -1842,7 +1842,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                         else translate_long(text)
                     )
                     translated.append({str(idx): translated_text})
-                print("translated sub_headlines", translated)
+
                 target_json[key] = "".join(
                     f"<p>{v[str(i)]}</p>" for i, v in enumerate(translated)
                 )
