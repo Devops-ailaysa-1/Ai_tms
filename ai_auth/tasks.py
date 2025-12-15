@@ -1842,7 +1842,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                         else translate_long(text)
                     )
                     translated.append({str(idx): translated_text})
-
+                print("translated sub_headlines", translated)
                 target_json[key] = "".join(
                     f"<p>{v[str(i)]}</p>" for i, v in enumerate(translated)
                 )
