@@ -1841,11 +1841,9 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                         if len(text.split()) <= 3
                         else translate_long(text)
                     )
-                    translated.append({str(idx): translated_text})
+                    translated.append({str(idx): f"<p>{translated_text}</p>"})
 
-                target_json[key] = "".join(
-                    f"<p>{v[str(i)]}</p>" for i, v in enumerate(translated)
-                )
+                target_json[key] = translated
 
             elif key != "sub_headlines":
                 paragraphs = html_to_list(value)
