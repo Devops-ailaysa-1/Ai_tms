@@ -1150,11 +1150,11 @@ def mt_raw_update(task_id,segments):
                         if isAdaptiveTranslation:
                             # Adapting glossary
                             raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code, \
-                                                    user_id=task.owner_pk, cc=consumable_credits)
+                                                    user_id=task.owner_pk, cc=consumable_credits, task=task)
                             mt = replace_with_gloss(seg.source,raw_mt,task)
                         else:
                             # Without adapting glossary
-                            mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                            mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits, task=task)
                             raw_mt = mt
 
                         tags = get_tags(seg)
