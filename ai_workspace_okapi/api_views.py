@@ -2030,13 +2030,26 @@ class SegmentSizeView(viewsets.ViewSet): #User setting custom number of segments
     This view is to save and get number of segments per page for the user
     '''
     permission_classes = [IsAuthenticated]
-    def list(self,request):
+    def list(self, request):
         try:
-            queryset = SegmentPageSize.objects.get(ai_user_id = request.user.id)
-            serializer = SegmentPageSizeSerializer(queryset)
+            task_id = request.query_params.get('task_id')
+            queryset = SegmentPageSize.objects.get(ai_user_id=request.user.id)
+
+            context = {'request': request}
+
+            if task_id:
+                task = get_object_or_404(Task, id=task_id)
+                project_type = task.proj_obj.project_type.id
+
+                if project_type == 8:
+                    context['project_type'] = 8
+
+            serializer = SegmentPageSizeSerializer(queryset, context=context)
             return Response(serializer.data)
-        except:
-            return Response({'page_size':None})
+
+        except SegmentPageSize.DoesNotExist:
+            return Response({'page_size': None})
+
 
     def create(self,request):
         obj = SegmentPageSize.objects.filter(ai_user_id = request.user.id)
