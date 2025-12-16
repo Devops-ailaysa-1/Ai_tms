@@ -4749,10 +4749,15 @@ class NewsProjectSetupView(viewsets.ModelViewSet):
     def create_pib_news_detail(pr):
         mt_engine = AilaysaSupportedMtpeEngines.objects.get(name='PIB_Translator')
         tasks = pr.get_tasks
+        creation_type = pr.pib_stories.first().story_creation_type
         for task in tasks:
-            file_path = task.file.file.path
-            with open(file_path, 'r') as fp:
-                json_data = json.load(fp)
+            if creation_type == PibStoryCreationType.FILE_UPLOAD:
+                json_data = None
+            else:
+                file_path = task.file.file.path
+                with open(file_path, 'r') as fp:
+                    json_data = json.load(fp)
+            
             obj,created = TaskPibDetails.objects.get_or_create(task=task, pib_story=pr.pib_stories.first(), defaults = {'source_json':json_data})
             if created:
                 TaskNewsPIBMT.objects.create(task_pib_detail=obj,mt_engine=mt_engine)
@@ -5002,6 +5007,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
             instance_pib_details = TaskPibDetails.objects.create(task=task,source_json=json_data, pib_story=pib, status=status)
             if instance_pib_details.pib_story.story_creation_type == PibStoryCreationType.FILE_UPLOAD and pr.pre_translate:
                 # need to add document get DocumentViewByTask api end point here.
+                DocumentViewByTask.create_document_for_task_if_not_exists(task)
                 do_translate = mt_raw_update.apply_async((str(task.id), None))
                 instance_pib_details.celery_task_id = do_translate.id
                 instance_pib_details.save()
@@ -5382,7 +5388,7 @@ def get_task_count_report(request):
     
 import io
 import pandas as pd
-from ai_workspace_okapi.api_views import DocumentToFile
+from ai_workspace_okapi.api_views import DocumentToFile, DocumentViewByTask
 
 # Use pandas to write the data from db to excel
 def download_editors_report(res, from_date, to_date):
