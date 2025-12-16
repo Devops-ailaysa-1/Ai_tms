@@ -158,11 +158,17 @@ class LLMClient:
     
     @backoff.on_exception(backoff.expo,Exception,max_tries=3,jitter=backoff.full_jitter)
     def _handle_vertex_ai_pib(self, messages, system_instruction):
+        # print("Using Vertex AI PIB Nebius Model")
+        # print(system_instruction)
+
+        # print(messages)
+        # print("--------------------------------")
+        
 
         client = genai.Client(project=AI_RESEARCH_VERTEX_AI,vertexai=True,location=AI_RESEARCH_VERTEX_AI_LOCATION,credentials=credentials_nebius,)
 
         config = types.GenerateContentConfig(temperature=1,top_p=0.95,system_instruction=system_instruction,response_mime_type="application/json",
-            response_schema=pib_trans_result_schema,)
+            response_schema=pib_trans_result_schema,thinking_config=types.ThinkingConfig(thinking_budget=200))
 
         full_text_parts = []
 

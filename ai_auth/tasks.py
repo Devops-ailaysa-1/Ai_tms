@@ -1766,7 +1766,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
         ).prompt
 
         # -------- Style Guidance --------
-        style_guidance, _ = llm._handle_vertex_ai_pib(
+        style_guidance, _ = llm._handle_nebius(
             messages=json_data["story"],
             system_instruction=style_prompt,
         )
@@ -1780,13 +1780,13 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                 f"Always output ONLY the translation. "
                 f"Do not ask for clarification even if the input is short."
             )
-            return llm._handle_vertex_ai_pib(
+            return llm._handle_nebius(
                 system_instruction=instruction,
                 messages=text,
             )[0]
 
         def translate_long(text, prev_text=None):
-            first_pass, _ = llm._handle_vertex_ai_pib(
+            first_pass, _ = llm._handle_nebius(
                 system_instruction=stage1_prompt.format(
                     source_language=source_language,
                     target_language=target_language,
@@ -1803,7 +1803,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                 else f"source_text: {text}\n\ntarget_text: {first_pass}"
             )
 
-            final_text, _ = llm._handle_vertex_ai_pib(
+            final_text, _ = llm._handle_nebius(
                 system_instruction=stage2_prompt.format(
                     source_language=source_language,
                     target_language=target_language,
