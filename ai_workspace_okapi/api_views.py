@@ -585,7 +585,7 @@ class SegmentsView(views.APIView, PageNumberPagination):
         [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
         res = self.get_paginated_response(segments_ser.data)
         
-        if task.proj_obj.pib_stories.all().first().story_creation_type == PibStoryCreationType.FILE_UPLOAD:
+        if task.proj_obj.pib_stories.all() and task.proj_obj.pib_stories.all().first().story_creation_type == PibStoryCreationType.FILE_UPLOAD:
             if total_count == 0:
                 TaskPibDetails.objects.filter(task=task).update(status=PibTranslateStatusChoices.completed)
             else:
