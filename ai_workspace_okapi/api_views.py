@@ -54,9 +54,9 @@ from ai_auth.tasks import write_segments_to_db
 from ai_auth.utils import get_plan_name
 from ai_staff.models import SpellcheckerLanguages
 from ai_workspace.api_views import UpdateTaskCreditStatus
-from ai_workspace.models import File
+from ai_workspace.models import File, TaskPibDetails
 from ai_workspace.models import Project
-from ai_workspace.enums import BatchStatus
+from ai_workspace.enums import BatchStatus, PibStoryCreationType, PibTranslateStatusChoices
 from ai_workspace.models import Task, TaskAssign,TrackSegmentsBatchStatus
 from ai_workspace.serializers import TaskSerializer, TaskAssignSerializer
 from ai_workspace.serializers import TaskTranscriptDetailSerializer
@@ -570,6 +570,8 @@ class SegmentsView(views.APIView, PageNumberPagination):
         segments = document.segments_for_find_and_replace
         merge_segments = MergeSegment.objects.filter(text_unit__document=document_id)
         split_segments = SplitSegment.objects.filter(text_unit__document=document_id)
+        total_count = segments.filter(Q(target="") | Q(target=None)).count() + merge_segments.filter(Q(target="") | Q(target=None)).count() + split_segments.filter(Q(target="") | Q(target=None)).count()
+        
         final_segments = list(chain(segments, merge_segments, split_segments))
         sorted_final_segments = sorted(final_segments, key=lambda pu:pu.id if ((type(pu) is Segment) or (type(pu) is MergeSegment)) else pu.segment_id)
         page_len = self.paginate_queryset(range(1, len(final_segments) + 1), request)
@@ -582,6 +584,13 @@ class SegmentsView(views.APIView, PageNumberPagination):
 
         [i.update({"segment_count": j}) for i, j in zip(segments_ser.data, page_len)]
         res = self.get_paginated_response(segments_ser.data)
+        
+        if task.proj_obj.pib_stories.all().first().story_creation_type == PibStoryCreationType.FILE_UPLOAD:
+            if total_count == 0:
+                TaskPibDetails.objects.filter(task=task).update(status=PibTranslateStatusChoices.completed)
+            else:
+                TaskPibDetails.objects.filter(task=task).update(status=PibTranslateStatusChoices.in_progress)
+            
         return res
 
         # if (page_segments) and (task.job.project.get_mt_by_page == True) and (task.job.project.mt_enable == True) and (task.job.project.adaptive_file_translate == False):
