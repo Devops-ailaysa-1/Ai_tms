@@ -9,7 +9,7 @@ import zipfile,itertools
 from datetime import datetime
 from glob import glob
 from urllib.parse import urlparse
-from ai_auth.tasks import count_update,weighted_count_update
+from ai_auth.tasks import count_update, mt_raw_update,weighted_count_update
 import django_filters
 import docx2txt
 import nltk
@@ -5000,6 +5000,12 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
 
             status = PibTranslateStatusChoices.in_progress if pr.pre_translate else PibTranslateStatusChoices.yet_to_start
             instance_pib_details = TaskPibDetails.objects.create(task=task,source_json=json_data, pib_story=pib, status=status)
+            if instance_pib_details.pib_story.story_creation_type == PibStoryCreationType.FILE_UPLOAD and pr.pre_translate:
+                # need to add document get DocumentViewByTask api end point here.
+                do_translate = mt_raw_update.apply_async((str(task.id), None))
+                instance_pib_details.celery_task_id = do_translate.id
+                instance_pib_details.save()
+            
             TaskNewsPIBMT.objects.create(task_pib_detail=instance_pib_details,mt_engine=mt_engine)
 
 
