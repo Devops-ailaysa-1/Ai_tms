@@ -65,7 +65,7 @@ from ai_workspace.utils import create_assignment_id
 from ai_workspace_okapi.models import Document, Segment, TextUnit
 from ai_workspace_okapi.utils import download_file, text_to_speech, text_to_speech_long, get_res_path
 from ai_workspace_okapi.utils import get_translation, file_translate
-from .models import AiRoleandStep, Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
+from .models import AiRoleandStep, PIBStory, Project, Job, File, ProjectContentType, ProjectSubjectField, TempProject, TmxFile, ReferenceFiles, \
     Templangpair, TempFiles, TemplateTermsModel, TaskDetails, \
     TaskAssignInfo, TaskTranscriptDetails, TaskAssign, Workflows, Steps, WorkflowSteps, TaskAssignHistory, \
     ExpressProjectDetail, TaskPibDetails, TaskNewsPIBMT
@@ -783,7 +783,8 @@ class QuickProjectSetupView(viewsets.ModelViewSet):
                         #  context={'request': request,'user_1':user_1})     
         # else:
         ## the above code is commanded for standard project for din
-        serializer = ProjectQuickSetupSerializer(pagin_tc, many=True,context={'request': request,'user_1':user_1})
+        pib_stories_instances = PIBStory.objects.filter(project__in=queryset.values_list("id", flat=True))
+        serializer = ProjectQuickSetupSerializer(pagin_tc, many=True,context={'request': request,'user_1':user_1, "pib_stories_instances":pib_stories_instances})
         response = self.get_paginated_response(serializer.data)
         return  response
 

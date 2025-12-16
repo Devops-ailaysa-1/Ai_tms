@@ -422,6 +422,7 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 	glossary_proj_id = serializers.ReadOnlyField(source='glossary_project.id')
 	glossary_job_update = serializers.BooleanField(default=None,write_only=True,required=False,allow_null=True)
 	individual_gloss_project_id = serializers.SerializerMethodField()
+	story_creation_type = serializers.SerializerMethodField(method_name="get_pib_story_creation_type") # for the pip users
 	
 	class Meta:
 		model = Project
@@ -430,12 +431,18 @@ class ProjectQuickSetupSerializer(serializers.ModelSerializer):
 					"project_deadline","pre_translate","copy_paste_enable","workflow_id","team_exist","mt_engine_id",\
 					"project_type_id","voice_proj_detail","steps","contents",'file_create_type',"subjects","created_at",\
 					"mt_enable","from_text",'get_assignable_tasks_exists','designer_project_detail','get_mt_by_page',\
-					'file_translate','adaptive_file_translate', 'isAdaptiveTranslation', 'default_gloss_project_id', 'glossary_proj_id',"glossary_job_update", "adaptive_simple", "individual_gloss_project_id")
+					'file_translate','adaptive_file_translate', 'isAdaptiveTranslation', 'default_gloss_project_id', 'glossary_proj_id',"glossary_job_update", "adaptive_simple", "individual_gloss_project_id", "story_creation_type")
 
 	def get_individual_gloss_project_id(self, obj):
 		if hasattr(obj, 'individual_gloss_project') and obj.individual_gloss_project:
 			return obj.individual_gloss_project.project.id
 		return None
+
+	def get_pib_story_creation_type(self, instance):
+		if self.context.get('pib_stories_instances', None):
+			return self.context['pib_stories_instances'].filter(project=instance).first().story_creation_type if self.context['pib_stories_instances'].filter(project=instance).first() else ""
+		else:
+			return ""
 		
 	def run_validation(self, data):
 
