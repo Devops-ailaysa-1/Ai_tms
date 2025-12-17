@@ -5064,6 +5064,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
         pib = pib_serializer.save(created_by=request.user)
  
         story_creation_type = request.data.get("story_creation_type", None)
+        mt_engine = AilaysaSupportedMtpeEngines.objects.get(name="PIB_Translator")
         if story_creation_type and story_creation_type == PibStoryCreationType.FILE_UPLOAD:
             files = request.FILES.getlist('files')
             if not files:
@@ -5087,6 +5088,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
                 **request.data,
                 "files": files,
                 "project_type": ["8"],
+                "mt_engine":str(mt_engine.id)
             },
             context={"request": request, "user_1": user_1}
         )
