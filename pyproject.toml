@@ -108,6 +108,7 @@ langchain = "0.3.27"
 chromadb = "1.0.13"
 google-genai = "^1.50.1"
 langchain-community = "0.3.30"
+django-prometheus = "^2.4.1"
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.group.dev.dependencies]
