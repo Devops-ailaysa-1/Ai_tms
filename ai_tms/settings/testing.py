@@ -440,117 +440,180 @@ else:
 
 
 
+# LOGGING = {
+#     'version' : 1,
+#     'disable_existing_loggers' : False,
+
+#     'formatters' : {
+#         'dev_formatter' : {
+#             'format' : '{levelname} {asctime} {pathname} {message}',
+#             'style' : '{',
+#         },
+#         # 'newrelic_formatter': {
+#         #    '()': NewRelicContextFormatter,
+#         # },
+
+#         # 'fluent_fmt':{
+#         # '()': 'fluent.handler.FluentRecordFormatter',
+#         # 'format':{
+#         #   'level': '%(levelname)s',
+#         #   'hostname': '%(hostname)s',
+#         #   'where': '%(module)s.%(funcName)s',
+#         # }}
+#     },
+
+#     'loggers' : {
+#         # 'django' : {
+#         #     'handlers' : ['file',],
+#         #     'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
+#         #     'propogate' : True,
+#         # },
+
+#         'django' : {
+#             'handlers' : ['file_prod'],
+#             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
+#             'propogate' : True,
+#         },
+#         # 'app.debug': {
+#         #     'handlers': ['fluentdebug'],
+#         #     'level': 'DEBUG',
+#         #     'propagate': True,
+#         # },
+#         # 'app.info': {
+#         #     'handlers': ['fluentinfo'],
+#         #     'level': 'INFO',
+#         #     'propagate': True,
+#         # },
+#         #'': {
+#         #    'handlers': ['console' ],
+#         #    'level': 'INFO',
+#         #    'propagate': False,
+#         #},
+#         # 'django.request': {
+#         #     'handlers': ['fluentdebug'],
+#         #     'level': 'DEBUG',
+#         #     'propagate': True,
+#         # },
+#     },
+
+#     'handlers' : {
+#         #'console':{
+#         #    'class' : 'logging.StreamHandler',
+#         #    'level': 'INFO',
+#         #    'formatter': 'dev_formatter',
+#         #    'stream': 'ext://sys.stdout',
+#         #},
+#         'file' : {
+#             'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
+#             'class' : 'logging.FileHandler',
+#             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME")),  #filename to be received from .env
+#             'formatter' : 'dev_formatter',
+#         },
+
+#        'file_prod' : {
+#             'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
+#             'class' : 'logging.FileHandler',
+#             'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
+#             'formatter' : 'dev_formatter',
+#         },
+#     #    'newrelic': {
+#     #        'level': os.environ.get("LOGGING_LEVEL_NEW_RELIC"),
+#     #        'class': 'logging.StreamHandler',
+#     #        'formatter' : 'newrelic_formatter',
+#     #     },
+#     #     'fluentinfo':{
+#     #         'level':'INFO',
+#     #         'class':'fluent.handler.FluentHandler',
+#     #         'formatter': 'fluent_fmt',
+#     #         'tag':'django.info',
+#     #         'host':'fluentd',
+#     #         'port':24224,
+#     #         # 'timeout':3.0,
+#     #         # 'verbose': False
+#     #         },
+#     #    'fluentdebug':{
+#     #         'level':'DEBUG',
+#     #         'class':'fluent.handler.FluentHandler',
+#     #         'formatter': 'fluent_fmt',
+#     #         'tag':'django.debug',
+#     #         'host':'fluentd',
+#     #         'port':24224,
+#     #         # 'timeout':3.0,
+#     #         # 'verbose': True
+#     #     },
+
+#         # 'mail_admins' : {
+#         #     'level' : 'ERROR',
+#         #     'class': 'django.utils.log.AdminEmailHandler',
+#         #     'formatter' : 'dev_formatter',
+#         # }
+#     },
+
+
+# }
+
+
+#### NEW FLOW
+
+import os
+from django.utils.log import DEFAULT_LOGGING
+
+LOGGING_CONFIG = None
+
+LOGLEVEL = os.getenv('DJ_LOGLEVEL', 'INFO').upper()
+LOG_FILE = os.getenv('DJ_LOGFILE', 'server_debug.log')
+
 LOGGING = {
-    'version' : 1,
-    'disable_existing_loggers' : False,
+    'version': 1,
+    'disable_existing_loggers': False,
 
-    'formatters' : {
-        'dev_formatter' : {
-            'format' : '{levelname} {asctime} {pathname} {message}',
-            'style' : '{',
+    'formatters': {
+        # JSON formatter (default)
+        'default': {
+            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
         },
-        # 'newrelic_formatter': {
-        #    '()': NewRelicContextFormatter,
-        # },
-
-        # 'fluent_fmt':{
-        # '()': 'fluent.handler.FluentRecordFormatter',
-        # 'format':{
-        #   'level': '%(levelname)s',
-        #   'hostname': '%(hostname)s',
-        #   'where': '%(module)s.%(funcName)s',
-        # }}
+        'django.server': DEFAULT_LOGGING['formatters']['django.server'],
     },
 
-    'loggers' : {
-        # 'django' : {
-        #     'handlers' : ['file',],
-        #     'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
-        #     'propogate' : True,
-        # },
-
-        'django' : {
-            'handlers' : ['file_prod'],
-            'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
-            'propogate' : True,
+    'handlers': {
+        # Console (stdout)
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'default',
         },
-        # 'app.debug': {
-        #     'handlers': ['fluentdebug'],
-        #     'level': 'DEBUG',
-        #     'propagate': True,
-        # },
-        # 'app.info': {
-        #     'handlers': ['fluentinfo'],
-        #     'level': 'INFO',
-        #     'propagate': True,
-        # },
-        #'': {
-        #    'handlers': ['console' ],
-        #    'level': 'INFO',
-        #    'propagate': False,
-        #},
-        # 'django.request': {
-        #     'handlers': ['fluentdebug'],
-        #     'level': 'DEBUG',
-        #     'propagate': True,
-        # },
+
+        # File handler
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': LOG_FILE,
+            'formatter': 'default',
+            'level': LOGLEVEL,
+        },
+
+        # Django runserver handler
+        'django.server': DEFAULT_LOGGING['handlers']['django.server'],
     },
 
-    'handlers' : {
-        #'console':{
-        #    'class' : 'logging.StreamHandler',
-        #    'level': 'INFO',
-        #    'formatter': 'dev_formatter',
-        #    'stream': 'ext://sys.stdout',
-        #},
-        'file' : {
-            'level' : os.environ.get("LOGGING_LEVEL"), # to be received from .env file
-            'class' : 'logging.FileHandler',
-            'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME")),  #filename to be received from .env
-            'formatter' : 'dev_formatter',
+    'loggers': {
+        # Root logger (ALL apps)
+        '': {
+            'level': LOGLEVEL,
+            'handlers': ['console', 'file'],
         },
 
-       'file_prod' : {
-            'level' : os.environ.get("LOGGING_LEVEL_PROD"), # to be received from .env file
-            'class' : 'logging.FileHandler',
-            'filename' : '{}.log'.format(os.environ.get("LOG_FILE_NAME_PROD")),  #filename to be received from .env
-            'formatter' : 'dev_formatter',
+        # Django runserver logs
+        'django.server': {
+            **DEFAULT_LOGGING['loggers']['django.server'],
+            'handlers': ['console', 'file'],
         },
-    #    'newrelic': {
-    #        'level': os.environ.get("LOGGING_LEVEL_NEW_RELIC"),
-    #        'class': 'logging.StreamHandler',
-    #        'formatter' : 'newrelic_formatter',
-    #     },
-    #     'fluentinfo':{
-    #         'level':'INFO',
-    #         'class':'fluent.handler.FluentHandler',
-    #         'formatter': 'fluent_fmt',
-    #         'tag':'django.info',
-    #         'host':'fluentd',
-    #         'port':24224,
-    #         # 'timeout':3.0,
-    #         # 'verbose': False
-    #         },
-    #    'fluentdebug':{
-    #         'level':'DEBUG',
-    #         'class':'fluent.handler.FluentHandler',
-    #         'formatter': 'fluent_fmt',
-    #         'tag':'django.debug',
-    #         'host':'fluentd',
-    #         'port':24224,
-    #         # 'timeout':3.0,
-    #         # 'verbose': True
-    #     },
-
-        # 'mail_admins' : {
-        #     'level' : 'ERROR',
-        #     'class': 'django.utils.log.AdminEmailHandler',
-        #     'formatter' : 'dev_formatter',
-        # }
-    },
-
-
+    }
 }
+
+
+
+
+
+
 
 
 # sentry_sdk.init(
