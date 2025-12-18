@@ -43,8 +43,7 @@ def is_numbers_or_punctuation(text: str) -> bool:
     return all(c in allowed for c in text)
 
 
-credentials_nebius = service_account.Credentials.from_service_account_file(AI_RESEARCH_VERTEX_AI_JSON_PATH,
-                                                                           scopes=["https://www.googleapis.com/auth/cloud-platform"])
+#credentials_nebius = service_account.Credentials.from_service_account_file(AI_RESEARCH_VERTEX_AI_JSON_PATH, scopes=["https://www.googleapis.com/auth/cloud-platform"])
 
 safety_settings=[
             types.SafetySetting(
@@ -187,7 +186,7 @@ class LLMClient:
 
 
 
-    @backoff.on_exception(backoff.expo, Exception, max_tries=3, jitter=backoff.full_jitter)
+    @backoff.on_exception(backoff.expo, Exception, max_tries=5, jitter=backoff.full_jitter)
     def _handle_nebius(self, messages, system_instruction, max_tokens=60000):
         """
         Handle Nebius API requests using the gemma model 27b with fast model
@@ -204,7 +203,7 @@ class LLMClient:
         data = {
             "model": self.model,  # Use the model specified in the constructor
             "messages": [
-                {"role": "system", "content": system_instruction +"do not miss any do not add any extra information other than what is asked only give the resultant translated sentence or paragraph."},
+                {"role": "system", "content": system_instruction +"do not miss any do not add any extra information other than what is asked only give the resultant translated sentence or paragraph or word do not give any acknowledgement."},
                 {
                     "role": "user",
                     "content": [
@@ -328,7 +327,69 @@ class LLMClient:
             return None
 
 
-#####
+
+
+def nebius_chat_validation( system_prompt , message):
+    try:
+ 
+        payload = {
+            "model": "openai/gpt-oss-120b",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": system_prompt,
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        [{"type": "text", "text": message}]
+                        if isinstance(message, str)
+                        else message
+                    ),
+                },
+            ],
+            "max_tokens": 19188,
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "valid_translation_schema",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "valid_translation_result": {
+                                "type": "string",
+                                "description": "The final validated translation output.",
+                            }
+                        },
+                        "required": ["valid_translation_result"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+        }
+
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "*/*",
+            "Authorization": f"Bearer {NEBIUS_API_KEY}",
+        }
+
+        response = requests.post(NEBIUS_API_URL, json=payload, headers=headers)
+        response.raise_for_status()
+        valid_translation_result = json.loads(response.json()['choices'][0]['message']['content'])['valid_translation_result']
+        print("Validated Translation Result:", valid_translation_result)
+
+        return  valid_translation_result
+    except Exception as e:
+        logger.error(f"Error in nebius_chat_validation: {e}")
+        return message
+
+
+ 
+
+
+######################
 
 
 def gemini_mp3(speech_file):
