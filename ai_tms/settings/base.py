@@ -63,6 +63,7 @@ CSRF_TRUSTED_ORIGINS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'django_prometheus',
     'channels',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -124,7 +125,7 @@ ASGI_APPLICATION = 'ai_tms.asgi.application'
 
 
 MIDDLEWARE = [
-    
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -140,6 +141,7 @@ MIDDLEWARE = [
     # 'django.middleware.gzip.GZipMiddleware',
     'ai_auth.custom_middleware.CustomGZipMiddleware',
     # 'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware'
     
 ]
 

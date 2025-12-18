@@ -619,6 +619,13 @@ class SegmentPageSizeSerializer(serializers.ModelSerializer):
         model = SegmentPageSize
         fields = "__all__"
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        if self.context.get('project_type') == 8:
+            data['page_size'] = 10
+
+        return data
 # class CommentSerializer(serializers.ModelSerializer):
 #     commented_by_user = serializers.ReadOnlyField(source='commented_by.fullname')
 #     class Meta:
