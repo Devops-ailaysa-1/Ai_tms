@@ -1989,3 +1989,197 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
 #         task_pib_details_instance.status = PibTranslateStatusChoices.failed
 #         task_pib_details_instance.save()
 #         logger.error(f'Error in translation pib story: {e}')
+
+def pib_split_check(split_segment_instances, segment_id):
+    split_seg = split_segment_instances.filter(id=segment_id).first()
+    if split_seg:
+        if split_seg.segment.is_split == True:
+            return False
+        else:
+            return True
+    else:
+        return True
+
+
+
+def pib_get_consumable_credits(doc, segment_id,split_segment_intances, seg=None):
+    from ai_workspace_okapi.api_views import MT_RawAndTM_View
+    
+    if segment_id:
+        if pib_split_check(split_segment_intances,segment_id):
+            segment = seg.get_active_object() #if segment_id else None
+            segment_source = segment.source #if segment!= None else seg
+            return MT_RawAndTM_View.get_word_count(segment_source, doc)
+
+        # For split segment
+        else:
+            split_seg_source = split_segment_intances.objects.filter(id=segment_id).first().source
+            return MT_RawAndTM_View.get_word_count(split_seg_source, doc)
+
+@task(queue='high-priority')
+def pib_mt_raw_update(task_id):
+
+    '''
+    This task is mainly used for get_mt (mt-only download) for the source files.
+    This is called for page-wise translation.
+    '''
+
+    from ai_workspace.models import Task
+    from ai_workspace_okapi.models import Segment,TranslationStatus,MT_RawTranslation,MtRawSplitSegment
+    from ai_workspace_okapi.api_views import MT_RawAndTM_View,get_tags
+    from ai_workspace_okapi.models import MergeSegment,SplitSegment
+    from itertools import chain
+    
+    try:
+        task = Task.objects.get(id=task_id)
+        MTonlytaskCeleryStatus.objects.create(task_id=task_id, task_name='mt_raw_update', status=1,celery_task_id=mt_raw_update.request.id)
+        user = task.job.project.ai_user
+        mt_engine = task.job.project.mt_engine_id
+        isAdaptiveTranslation = task.job.project.isAdaptiveTranslation
+        
+        segments = task.document.segments_for_find_and_replace.filter(Q(target="") | Q(target=None))
+        merge_segments = MergeSegment.objects.filter(text_unit__document=task.document).filter(Q(target="") | Q(target=None))
+        split_segments = SplitSegment.objects.filter(text_unit__document=task.document).filter(Q(target="")|Q(target=None))
+        final_segments = list(chain(segments, merge_segments, split_segments))
+        
+        segment_status_id = TranslationStatus.objects.get(status_id=103).id
+
+        update_list, update_list_for_merged, update_list_for_split = [],[],[]
+        mt_segments, mt_split_segments = [],[]
+        
+        count = 1
+        pib_pretranslate_split_count = int(os.getenv("PIB_PRETRASLATE_SPLIT_COUNT"))
+        print("PIB_PRETRASLATE_SPLIT_COUNT ===> ", pib_pretranslate_split_count)
+        
+        segment_sub_list = [
+            final_segments[i:i + pib_pretranslate_split_count]
+            for i in range(0, len(final_segments), pib_pretranslate_split_count)
+        ]
+
+        for seg_sub_list in segment_sub_list:
+            
+            for seg in seg_sub_list:###############Need to revise####################
+                print("current count ==> ", count, "current segment =>> ", seg)
+                
+                if count == pib_pretranslate_split_count:
+                    break
+                
+                try:
+                    if (type(seg) is Segment):# or (type(seg) is MergeSegment):
+                        mt_raw = seg.seg_mt_raw
+                    elif (type(seg) is MergeSegment):
+                        mt_raw = seg.segments.first().seg_mt_raw
+                    else:
+                        if seg.mt_raw_split_segment.exists() == False:
+                            mt_raw = None
+                        else:
+                            mt_raw = seg.mt_raw_split_segment.first().mt_raw
+                except:
+                    mt_raw = None
+            
+                if mt_raw == None:
+                    if seg.target == '' or seg.target == None:
+                        initial_credit = user.credit_balance.get("total_left")
+                        consumable_credits = pib_get_consumable_credits(doc=task.document, segment_id=seg.id, split_segment_intances=split_segments, seg=seg)
+                        if initial_credit > consumable_credits:
+                            try:
+                                
+                                if isAdaptiveTranslation:
+                                    # Adapting glossary
+                                    raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code, \
+                                                            user_id=task.owner_pk, cc=consumable_credits, task=task)
+                                    mt = replace_with_gloss(seg.source,raw_mt,task)
+                                else:
+                                    # Without adapting glossary
+                                    mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits, task=task)
+                                    raw_mt = mt
+
+                                tags = get_tags(seg)
+
+                                if tags:
+                                    seg.target = mt + tags
+                                    seg.temp_target = mt + tags
+                                else:
+                                    seg.target = mt
+                                    seg.temp_target = mt
+                                seg.status_id = segment_status_id
+                                if type(seg) is SplitSegment:
+                                    mt_split_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
+                                
+                                # Previous else block    
+                                # else:mt_segments.append({'seg':seg,'mt':mt})
+                                else:mt_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
+                            except:
+                                seg.target = ''
+                                seg.temp_target = ''
+                                seg.status_id=None
+                        else:
+                            MTonlytaskCeleryStatus.objects.create(task_id = task_id,task_name='mt_raw_update',status=1,celery_task_id=mt_raw_update.request.id,\
+                                                                error_type="Insufficient Credits")
+                            break
+                        if type(seg) is Segment:
+                            update_list.append(seg)
+                        elif type(seg) is SplitSegment:
+                            update_list_for_split.append(seg)
+                        elif type(seg) is MergeSegment:
+                            update_list_for_merged.append(seg)
+                    else:
+                        initial_credit = user.credit_balance.get("total_left")
+                        consumable_credits = pib_get_consumable_credits(doc=task.document, segment_id=seg.id, split_segment_intances=split_segments, seg=seg)
+                        if initial_credit > consumable_credits:
+                            
+                            if isAdaptiveTranslation:
+                                # Adapting glossary
+                                raw_mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code, \
+                                                        user_id=task.owner_pk, cc=consumable_credits)
+                                mt = replace_with_gloss(seg.source,raw_mt,task)
+                            else:
+                                # Without adapting glossary
+                                mt = get_translation(mt_engine, seg.source, task.document.source_language_code, task.document.target_language_code,user_id=task.owner_pk,cc=consumable_credits)
+                                raw_mt = mt
+
+                            if type(seg) is SplitSegment:
+                                mt_split_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
+                            else:mt_segments.append({'seg':seg,'mt':mt, "mt_only":raw_mt})
+                        else:
+                            logger.info("Insufficient credits")
+                
+                count += 1
+                
+                        
+            
+            Segment.objects.bulk_update(update_list,['target','temp_target','status_id'])
+            MergeSegment.objects.bulk_update(update_list_for_merged,['target','temp_target','status_id'])
+            SplitSegment.objects.bulk_update(update_list_for_split,['target','temp_target','status_id'])
+            
+            
+            instances = [
+                    MT_RawTranslation(
+                        mt_raw= re.sub(r'<[^>]+>', "", i['mt']),
+                        mt_only = re.sub(r'<[^>]+>', "", i['mt_only']),
+                        mt_engine_id = mt_engine,
+                        task_mt_engine_id = mt_engine,
+                        segment_id= i['seg'].id,
+                    )
+                    for i in mt_segments
+                ]
+
+            tt = MT_RawTranslation.objects.bulk_create(instances, ignore_conflicts=True)
+
+            instances_1 = [
+                    MtRawSplitSegment(
+                        mt_raw= re.sub(r'<[^>]+>', "", i['mt']),
+                        mt_only = re.sub(r'<[^>]+>', "", i['mt_only']),
+                        split_segment_id= i['seg'].id,
+                    )
+                    for i in mt_split_segments
+                ]
+            tr = MtRawSplitSegment.objects.bulk_create(instances_1, ignore_conflicts=True)
+
+            logger.info("mt_raw_update")
+    
+    except Exception as e:
+        instance_pib_details = TaskPibDetails.objects.get(task=task_id)
+        instance_pib_details.status = PibTranslateStatusChoices.failed
+        instance_pib_details.save()
+
