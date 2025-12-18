@@ -293,40 +293,68 @@ def lingvanex(source_string, source_lang_code, target_lang_code):
     r = requests.post(url, headers=headers, json=data)
     return r.json()["result"]
 
-def standard_project_create_and_update_pib_news_details(user, task,source_string, source_language, target_language, stage_1_prompt):
-    from tqdm import tqdm
-    from ai_workspace.adaptive import PIBStyleAnalysis
-    from ai_workspace.models import TaskStyle
-    api_client = LLMClient(provider = "nebius",model=settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB,style="")
+# def standard_project_create_and_update_pib_news_details(user, task,source_string, source_language, target_language, stage_1_prompt):
+#     from tqdm import tqdm
+#     from ai_workspace.adaptive import PIBStyleAnalysis
+#     from ai_workspace.models import TaskStyle
+#     api_client = LLMClient(provider = "nebius",model=settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB,style="")
     
-    try:
+#     try:
         
-        style_create = PIBStyleAnalysis(user=user,task=task,api_client=api_client, target_language=target_language)
-        style_create.process(all_paragraph=source_string)
-    except Exception as e:
-        logger.error(f"Error in style analysis for task {task.id}: {e}",exc_info=True)
-        task.adaptive_file_translate_status = "FAILED"
-        task.save()
+#         style_create = PIBStyleAnalysis(user=user,task=task,api_client=api_client, target_language=target_language)
+#         style_create.process(all_paragraph=source_string)
+#     except Exception as e:
+#         logger.error(f"Error in style analysis for task {task.id}: {e}",exc_info=True)
+#         task.adaptive_file_translate_status = "FAILED"
+#         task.save()
     
-    task_style_prompt = TaskStyle.objects.get(task = task)
-    if task_style_prompt:
-        llm_client_obj = LLMClient("pib_nebius", settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "")
-        formated_stage_1_prompt = stage_1_prompt.prompt.format(style_prompt="{style_promt}",source_language=source_language, target_language=target_language)
+#     task_style_prompt = TaskStyle.objects.get(task = task)
+#     if task_style_prompt:
+#         llm_client_obj = LLMClient("pib_nebius", settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "")
+#         formated_stage_1_prompt = stage_1_prompt.prompt.format(style_prompt="{style_promt}",source_language=source_language, target_language=target_language)
         
-        result = []
-        pib_news_list = source_string.split("\n\n")
+#         result = []
+#         pib_news_list = source_string.split("\n\n")
         
-        for count, text_para in tqdm(enumerate(pib_news_list)):
-            if text_para:
-                translation_stage_1, usage = llm_client_obj._handle_nebius(messages=text_para,
-                                                    system_instruction=formated_stage_1_prompt.replace("{style_promt}",task_style_prompt.style_guide))
-                result.append(translation_stage_1)
+#         for count, text_para in tqdm(enumerate(pib_news_list)):
+#             if text_para:
+#                 translation_stage_1, usage = llm_client_obj._handle_nebius(messages=text_para,
+#                                                     system_instruction=formated_stage_1_prompt.replace("{style_promt}",task_style_prompt.style_guide))
+#                 result.append(translation_stage_1)
         
-    return "\n\n".join(result)
+#     return "\n\n".join(result)
+
+def standard_project_create_and_update_pib_news_details_2(source_string,task):
+    from ai_workspace.adaptive import is_numbers_or_punctuation
+    llm = LLMClient("nebius", settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "")
+    print(len(source_string.strip()))
+    source_language = task.job.source_language.language
+    target_language = task.job.target_language.language
+    print("source_language",source_language)
+    print("target_language",target_language)
+
+    if is_numbers_or_punctuation(source_string) or len(source_string.strip())<=1:
+            return source_string, 0
+
+    short_instruction = (
+                f"Translate this {source_language} text into {target_language}. "
+                f"Always output ONLY the translation. for media domain and use media terminology with that target language. the given input is short or may contains singele word or phrase or character. "
+                f"Do not ask for clarification even if the input is short."
+            )
+    if len(source_string.split()) <= 3:
+        res_sen, _ = llm._handle_nebius( messages = source_string, system_instruction = short_instruction )
+        return res_sen
+    else:
+        stage1_prompt = AdaptiveSystemPrompt.objects.get( task_name="translation_pib_stage_1" ).prompt
+        formated_stage_1_prompt = stage1_prompt.format(source_language=source_language, target_language=target_language)
+        res_sen, _ = llm._handle_nebius( messages = source_string, system_instruction = formated_stage_1_prompt )
+        return res_sen
+                     
+
+
  
 @backoff.on_exception(backoff.expo,(requests.exceptions.RequestException,requests.exceptions.ConnectionError,),max_tries=2)
-def get_translation(mt_engine_id, source_string, source_lang_code, 
-                    target_lang_code, user_id=None, cc=None, from_open_ai=None, format_='text', task=None):
+def get_translation(mt_engine_id, source_string, source_lang_code,   target_lang_code, user_id=None, cc=None, from_open_ai=None, format_='text', task=None):
     
     # get_translation(mt_engine_id, text, sl_code, tl_code, user_id=user.id, cc=word_count)
 
@@ -402,7 +430,8 @@ def get_translation(mt_engine_id, source_string, source_lang_code,
             # stage_1_prompt_obj = stage_1_prompt_obj.filter(stages="pib_stage_1")
             stage_1_prompt = stage_1_prompt_obj[0] if stage_1_prompt_obj.exists() else None
             record_api_usage.apply_async(("Ailaysa","Machine Translation",uid,email,len(source_string)), queue='low-priority')
-            translate = standard_project_create_and_update_pib_news_details(user,task,source_string, source_lang_code, target_lang_code, stage_1_prompt)
+            #translate = standard_project_create_and_update_pib_news_details(user,task,source_string, source_lang_code, target_lang_code, stage_1_prompt)
+            translate = standard_project_create_and_update_pib_news_details_2(source_string = source_string,task=task)
 
     if mt_called == True and from_open_ai == None:
         if user:
