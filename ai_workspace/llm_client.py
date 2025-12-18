@@ -156,36 +156,32 @@ class LLMClient:
         output_stream = output_stream.strip()
         return output_stream ,usage
     
-    @backoff.on_exception(backoff.expo,Exception,max_tries=3,jitter=backoff.full_jitter)
-    def _handle_vertex_ai_pib(self, messages, system_instruction):
-        # print("Using Vertex AI PIB Nebius Model")
-        # print(system_instruction)
-
-        # print(messages)
-        # print("--------------------------------")
+    # @backoff.on_exception(backoff.expo,Exception,max_tries=3,jitter=backoff.full_jitter)
+    # def _handle_vertex_ai_pib(self, messages, system_instruction):
+ 
         
 
-        client = genai.Client(project=AI_RESEARCH_VERTEX_AI,vertexai=True,location=AI_RESEARCH_VERTEX_AI_LOCATION,credentials=credentials_nebius,)
+    #     client = genai.Client(project=AI_RESEARCH_VERTEX_AI,vertexai=True,location=AI_RESEARCH_VERTEX_AI_LOCATION,credentials=credentials_nebius,)
 
-        config = types.GenerateContentConfig(temperature=1,top_p=0.95,system_instruction=system_instruction,response_mime_type="application/json",
-            response_schema=pib_trans_result_schema,thinking_config=types.ThinkingConfig(thinking_budget=200))
+    #     config = types.GenerateContentConfig(temperature=1,top_p=0.95,system_instruction=system_instruction,response_mime_type="application/json",
+    #         response_schema=pib_trans_result_schema,thinking_config=types.ThinkingConfig(thinking_budget=200))
 
-        full_text_parts = []
+    #     full_text_parts = []
 
-        for chunk in client.models.generate_content_stream(model=AI_RESEARCH_VERTEX_AI_MODEL_LINK,contents=messages,config=config,):
-            if chunk.text:
-                full_text_parts.append(chunk.text)
+    #     for chunk in client.models.generate_content_stream(model=AI_RESEARCH_VERTEX_AI_MODEL_LINK,contents=messages,config=config,):
+    #         if chunk.text:
+    #             full_text_parts.append(chunk.text)
 
-        full_text = "".join(full_text_parts).strip()
+    #     full_text = "".join(full_text_parts).strip()
 
-        if not full_text:
-            return "", 0
+    #     if not full_text:
+    #         return "", 0
         
-        try:
-            parsed = json.loads(full_text)
-            return parsed.get("translated_result", full_text), 0
-        except json.JSONDecodeError:
-            return full_text, 0
+    #     try:
+    #         parsed = json.loads(full_text)
+    #         return parsed.get("translated_result", full_text), 0
+    #     except json.JSONDecodeError:
+    #         return full_text, 0
 
 
 
@@ -208,7 +204,7 @@ class LLMClient:
         data = {
             "model": self.model,  # Use the model specified in the constructor
             "messages": [
-                {"role": "system", "content": system_instruction},
+                {"role": "system", "content": system_instruction +"do not miss any do not add any extra information other than what is asked only give the resultant translated sentence or paragraph."},
                 {
                     "role": "user",
                     "content": [

@@ -2136,6 +2136,13 @@ class MinistryTranslateName(models.Model):
         indexes = [
             models.Index(fields=['translate_name']),
         ]
+
+class PIBSystemLanguagePrompts(models.Model):
+    language = models.ForeignKey(Languages, on_delete=models.CASCADE, related_name='pib_language')
+    system_prompt = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
  
 
 # class Stage(models.Model):
