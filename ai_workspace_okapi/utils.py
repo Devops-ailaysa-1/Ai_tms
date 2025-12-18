@@ -325,13 +325,11 @@ def lingvanex(source_string, source_lang_code, target_lang_code):
 #     return "\n\n".join(result)
 
 def standard_project_create_and_update_pib_news_details_2(source_string,task):
-    from ai_workspace.llm_client import is_numbers_or_punctuation
+    from ai_workspace.llm_client import is_numbers_or_punctuation, nebius_chat_validation
     llm = LLMClient("nebius", settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "")
-    print(len(source_string.strip()))
+    
     source_language = task.job.source_language.language
     target_language = task.job.target_language.language
-    print("source_language",source_language)
-    print("target_language",target_language)
 
     if is_numbers_or_punctuation(source_string) or len(source_string.strip())<=1:
             return source_string, 0
@@ -343,12 +341,16 @@ def standard_project_create_and_update_pib_news_details_2(source_string,task):
             )
     if len(source_string.split()) <= 3:
         res_sen, _ = llm._handle_nebius( messages = source_string, system_instruction = short_instruction )
-        return res_sen
+         
     else:
         stage1_prompt = AdaptiveSystemPrompt.objects.get( task_name="translation_pib_stage_1" ).prompt
         formated_stage_1_prompt = stage1_prompt.format(source_language=source_language, target_language=target_language)
         res_sen, _ = llm._handle_nebius( messages = source_string, system_instruction = formated_stage_1_prompt )
-        return res_sen
+        
+    stage2_prompt = AdaptiveSystemPrompt.objects.get(  task_name="translation_pib_stage_2" ).prompt
+    res_sen = nebius_chat_validation( system_prompt=stage2_prompt.format( source_language=source_language, target_language=target_language)+"\nsource_sentence: "+source_string , message=res_sen )
+ 
+    return res_sen
                      
 
 
