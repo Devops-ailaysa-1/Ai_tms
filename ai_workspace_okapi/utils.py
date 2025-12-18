@@ -325,7 +325,7 @@ def lingvanex(source_string, source_lang_code, target_lang_code):
 #     return "\n\n".join(result)
 
 def standard_project_create_and_update_pib_news_details_2(source_string,task):
-    from ai_workspace.adaptive import is_numbers_or_punctuation
+    from ai_workspace.llm_client import is_numbers_or_punctuation
     llm = LLMClient("nebius", settings.ADAPTIVE_TRANSLATE_LLM_MODEL_PIB, "")
     print(len(source_string.strip()))
     source_language = task.job.source_language.language
