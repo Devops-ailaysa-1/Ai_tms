@@ -1753,15 +1753,15 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
         source_language = task_pib.task.job.source_language.language
         target_language = task_pib.task.job.target_language.language
 
-        style_prompt = AdaptiveSystemPrompt.objects.get( task_name="translation_pib_style").prompt.format(target_language=target_language)
+        #style_prompt = AdaptiveSystemPrompt.objects.get( task_name="translation_pib_style").prompt.format(target_language=target_language)
 
         stage1_prompt = AdaptiveSystemPrompt.objects.get( task_name="translation_pib_stage_1" ).prompt
 
         stage2_prompt = AdaptiveSystemPrompt.objects.get(  task_name="translation_pib_stage_2" ).prompt
 
         # -------- Style Guidance --------
-        style_guidance, _ = llm._handle_nebius( messages=json_data["story"], system_instruction=style_prompt,)
-        #print("style_guidance",style_guidance)
+        #style_guidance, _ = llm._handle_nebius( messages=json_data["story"], system_instruction=style_prompt,)
+         
 
         target_json = {}
 
@@ -1775,10 +1775,10 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
             short_trans ,_ = llm._handle_nebius( system_instruction=instruction, messages=text) 
             return short_trans
 
-        def translate_long(text, prev_text=None):
+        def translate_long(text, prev_text=None): #style_prompt=style_guidance,
             first_pass, _ = llm._handle_nebius(
                 system_instruction=stage1_prompt.format(source_language=source_language,target_language=target_language,
-                    style_prompt=style_guidance,
+                    
                 ),
                 messages=text,
             )
