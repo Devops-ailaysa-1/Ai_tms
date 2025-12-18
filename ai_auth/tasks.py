@@ -1761,8 +1761,7 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
 
         # -------- Style Guidance --------
         #style_guidance, _ = llm._handle_nebius( messages=json_data["story"], system_instruction=style_prompt,)
-         
-
+        
         target_json = {}
 
         # -------- Helper Functions --------
