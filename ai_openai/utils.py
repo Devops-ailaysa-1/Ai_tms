@@ -129,21 +129,7 @@ def get_prompt_chatgpt_turbo(prompt,n,max_token=None):
         completion = openai.ChatCompletion.create(model=OPEN_AI_GPT_MODEL,messages=[{"role":"user","content": prompt}],n=n)
     return completion
 
-# async def generate_text(prompt):
-#     response = await openai.Completion.acreate(engine=TEXT_DAVINCI,prompt=prompt,max_tokens=150,n=1,top_p=1,
-#                                                frequency_penalty=1,presence_penalty=1,temperature=0.7,)
-#     return response
-
-# async def generate_texts(outline_section_prompt_list , title ,tone ,keyword):
-#     coroutines=[]
-#     for prompt in outline_section_prompt_list:
-#         prompt='Create a paragraph for {} for a title {} with keywords {} in {} tone'.format(prompt,title,keyword,tone)
-#         coroutines.append(generate_text(prompt))
-#     return await asyncio.gather(*coroutines)
-
-# def blog_generator(outline_section_prompt_list ,title,tone,keyword):
-#     results = asyncio.run(generate_texts(outline_section_prompt_list ,title ,tone ,keyword))
-#     return  results
+ 
 
 ############
 async def generate_outline_response(prompt,n):
