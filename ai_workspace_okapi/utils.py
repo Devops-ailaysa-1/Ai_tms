@@ -347,8 +347,8 @@ def standard_project_create_and_update_pib_news_details_2(source_string,task):
         formated_stage_1_prompt = stage1_prompt.format(source_language=source_language, target_language=target_language)
         res_sen, _ = llm._handle_nebius( messages = source_string, system_instruction = formated_stage_1_prompt )
         
-    stage2_prompt = AdaptiveSystemPrompt.objects.get(  task_name="translation_pib_stage_2" ).prompt
-    res_sen = nebius_chat_validation( system_prompt=stage2_prompt.format( source_language=source_language, target_language=target_language)+"\nsource_sentence: "+source_string , message=res_sen )
+    #stage2_prompt = AdaptiveSystemPrompt.objects.get(  task_name="translation_pib_stage_2" ).prompt
+    #res_sen = nebius_chat_validation( system_prompt=stage2_prompt.format( source_language=source_language, target_language=target_language)+"\nsource_sentence: "+source_string , message=res_sen )
  
     return res_sen
                      
