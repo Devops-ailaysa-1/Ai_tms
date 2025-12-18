@@ -1,3 +1,4 @@
+from bs4 import BeautifulSoup
 from .serializers import (DocumentSerializer, DocumentSerializerV3,
                           TranslationStatusSerializer, CommentSerializer,
                           TM_FetchSerializer, VerbSerializer,SegmentPageSizeSerializer)
@@ -2798,6 +2799,10 @@ def download_mt_file(request):
     else:
         return Response({'msg':'Pending','task':task.id},status=400)
 
+def html_to_text(html: str) -> str:
+    soup = BeautifulSoup(html, "html.parser")
+    return soup.get_text(separator=" ", strip=True)
+
 
 def json_bilingual(src_json,tar_json,split_dict,document_to_file,language_pair):
     '''
@@ -2823,6 +2828,9 @@ def json_bilingual(src_json,tar_json,split_dict,document_to_file,language_pair):
     ordered_keys = []
     if "heading" in source_data:
         ordered_keys.append("heading")
+    
+    if "sub_headlines" in source_data:
+        ordered_keys.append("sub_headlines")
 
     if "story" in source_data:
         ordered_keys.append("story")
@@ -2830,11 +2838,15 @@ def json_bilingual(src_json,tar_json,split_dict,document_to_file,language_pair):
     for k in source_data.keys():
         if k not in ordered_keys:
             ordered_keys.append(k)
-
-    flattened_data = {
-        key: [source_data[key], target_data[key]]
-        for key in ordered_keys
-    }
+    
+    flattened_data = {}
+    for key in ordered_keys:
+        if key == "sub_headlines":
+            for src_item, tgt_item in zip(source_data[key], target_data[key]):
+                for k in src_item.keys():
+                    flattened_data[k] = [src_item[k],html_to_text(tgt_item[k])]
+        else:    
+            flattened_data[key] = [source_data[key], html_to_text(target_data[key])]
 
     flattened_data = pd.DataFrame(flattened_data).transpose()
     flattened_data.columns = language_pair
