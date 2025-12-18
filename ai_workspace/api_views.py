@@ -5008,7 +5008,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
             if instance_pib_details.pib_story.story_creation_type == PibStoryCreationType.FILE_UPLOAD and pr.pre_translate:
                 # need to add document get DocumentViewByTask api end point here.
                 DocumentViewByTask.create_document_for_task_if_not_exists(task)
-                do_translate = pib_mt_raw_update.apply_async((str(task.id)))
+                do_translate = pib_mt_raw_update.apply_async((str(task.id),))
                 instance_pib_details.celery_task_id = do_translate.id
                 instance_pib_details.save()
             
