@@ -1753,32 +1753,30 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
         source_language = task_pib.task.job.source_language.language
         target_language = task_pib.task.job.target_language.language
 
-        style_prompt = AdaptiveSystemPrompt.objects.get( task_name="translation_pib_style").prompt.format(target_language=target_language)
+        #style_prompt = AdaptiveSystemPrompt.objects.get( task_name="translation_pib_style").prompt.format(target_language=target_language)
 
         stage1_prompt = AdaptiveSystemPrompt.objects.get( task_name="translation_pib_stage_1" ).prompt
 
         stage2_prompt = AdaptiveSystemPrompt.objects.get(  task_name="translation_pib_stage_2" ).prompt
 
         # -------- Style Guidance --------
-        style_guidance, _ = llm._handle_nebius( messages=json_data["story"], system_instruction=style_prompt,)
-        #print("style_guidance",style_guidance)
-
+        #style_guidance, _ = llm._handle_nebius( messages=json_data["story"], system_instruction=style_prompt,)
+        
         target_json = {}
 
         # -------- Helper Functions --------
         def translate_short(text):
             instruction = (
                 f"Translate this {source_language} text into {target_language}. "
-                f"Always output ONLY the translation. "
+                f"Always output ONLY the translation. for media domain and use media terminology with that target language. "
                 f"Do not ask for clarification even if the input is short."
             )
             short_trans ,_ = llm._handle_nebius( system_instruction=instruction, messages=text) 
             return short_trans
 
-        def translate_long(text, prev_text=None):
+        def translate_long(text, prev_text=None): #style_prompt=style_guidance,
             first_pass, _ = llm._handle_nebius(
-                system_instruction=stage1_prompt.format(source_language=source_language,target_language=target_language,
-                    style_prompt=style_guidance,
+                system_instruction=stage1_prompt.format(source_language=source_language,target_language=target_language,  
                 ),
                 messages=text,
             )
@@ -1824,11 +1822,12 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                         translated.append({str(idx): "<br>"})
                         continue
 
-                    translated_text = (
-                        translate_short(text)
-                        if len(text.split()) <= 3
-                        else translate_long(text)
-                    )
+                    # translated_text = (
+                    #     translate_short(text)
+                    #     if len(text.split()) <= 3
+                    #     else translate_long(text)
+                    # )
+                    translated_text = translate_short(text)
                     translated.append({str(idx): f"<p>{translated_text}</p>"})
 
                 target_json[key] = translated
