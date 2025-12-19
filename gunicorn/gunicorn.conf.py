@@ -29,4 +29,6 @@ bind = ['%s:%s' % (os.getenv('GC_HOST', '0.0.0.0'),
 
 # [ Worker Processes ]
 workers = os.getenv('GC_WORKERS')
+worker_class = os.getenv('GC_WORKER_CLASS', 'sync')
+threads = int(os.getenv('GC_THREADS', '1'))
 timeout = os.getenv('GC_TIMEOUT', 120)
