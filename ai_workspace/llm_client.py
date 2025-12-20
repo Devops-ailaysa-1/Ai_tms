@@ -7,6 +7,9 @@ from django.conf import settings
 import logging
 import requests
 import os
+import struct
+import base64
+import mimetypes
 from google.oauth2 import service_account
 logger = logging.getLogger('django')
 from ai_workspace import exceptions
@@ -43,8 +46,7 @@ def is_numbers_or_punctuation(text: str) -> bool:
     return all(c in allowed for c in text)
 
 
-#credentials_nebius = service_account.Credentials.from_service_account_file(AI_RESEARCH_VERTEX_AI_JSON_PATH, scopes=["https://www.googleapis.com/auth/cloud-platform"])
-
+ 
 safety_settings=[
             types.SafetySetting(
                 category="HARM_CATEGORY_HARASSMENT",
@@ -155,32 +157,38 @@ class LLMClient:
         output_stream = output_stream.strip()
         return output_stream ,usage
     
-    # @backoff.on_exception(backoff.expo,Exception,max_tries=3,jitter=backoff.full_jitter)
-    # def _handle_vertex_ai_pib(self, messages, system_instruction):
+    @backoff.on_exception(backoff.expo,Exception,max_tries=5,jitter=backoff.full_jitter)
+    def _handle_vertex_ai_pib(self, messages, system_instruction):
+        logger.info("Inside _handle_vertex_ai_pib method")
+
+        contents = [ types.Content( role="user", parts=[ types.Part.from_text(text=system_instruction+"\n\n"+messages)]  ) ]
+
+        print("contents----->",contents)
+     
+
+        credentials_nebius = service_account.Credentials.from_service_account_file(AI_RESEARCH_VERTEX_AI_JSON_PATH, scopes=["https://www.googleapis.com/auth/cloud-platform"])
  
+        client = genai.Client(project=AI_RESEARCH_VERTEX_AI,vertexai=True,location=AI_RESEARCH_VERTEX_AI_LOCATION,credentials=credentials_nebius,)
+
+        config = types.GenerateContentConfig(temperature=0.7,top_p=0.95,response_mime_type="application/json",
+            response_schema=pib_trans_result_schema,thinking_config=types.ThinkingConfig(thinking_budget=5000))#,system_instruction=system_instruction,
+
+        full_text_parts = []
+
+        for chunk in client.models.generate_content_stream(model=AI_RESEARCH_VERTEX_AI_MODEL_LINK,contents=contents,config=config,):
+            if chunk.text:
+                full_text_parts.append(chunk.text)
+
+        full_text = "".join(full_text_parts).strip()
+
+        if not full_text:
+            return "", 0
         
-
-    #     client = genai.Client(project=AI_RESEARCH_VERTEX_AI,vertexai=True,location=AI_RESEARCH_VERTEX_AI_LOCATION,credentials=credentials_nebius,)
-
-    #     config = types.GenerateContentConfig(temperature=1,top_p=0.95,system_instruction=system_instruction,response_mime_type="application/json",
-    #         response_schema=pib_trans_result_schema,thinking_config=types.ThinkingConfig(thinking_budget=200))
-
-    #     full_text_parts = []
-
-    #     for chunk in client.models.generate_content_stream(model=AI_RESEARCH_VERTEX_AI_MODEL_LINK,contents=messages,config=config,):
-    #         if chunk.text:
-    #             full_text_parts.append(chunk.text)
-
-    #     full_text = "".join(full_text_parts).strip()
-
-    #     if not full_text:
-    #         return "", 0
-        
-    #     try:
-    #         parsed = json.loads(full_text)
-    #         return parsed.get("translated_result", full_text), 0
-    #     except json.JSONDecodeError:
-    #         return full_text, 0
+        try:
+            parsed = json.loads(full_text)
+            return parsed.get("translated_result", full_text), 0
+        except json.JSONDecodeError:
+            return full_text, 0
 
 
 
@@ -438,3 +446,120 @@ def gemini_mp3(speech_file):
 
 
 
+##############################
+def convert_to_wav(audio_data: bytes, mime_type: str) -> bytes:
+    """Generates a WAV file header for the given audio data and parameters.
+
+    Args:
+        audio_data: The raw audio data as a bytes object.
+        mime_type: Mime type of the audio data.
+
+    Returns:
+        A bytes object representing the WAV file header.
+    """
+    parameters = parse_audio_mime_type(mime_type)
+    bits_per_sample = parameters["bits_per_sample"]
+    sample_rate = parameters["rate"]
+    num_channels = 1
+    data_size = len(audio_data)
+    bytes_per_sample = bits_per_sample // 8
+    block_align = num_channels * bytes_per_sample
+    byte_rate = sample_rate * block_align
+    chunk_size = 36 + data_size  # 36 bytes for header fields before data chunk size
+
+    # http://soundfile.sapp.org/doc/WaveFormat/
+
+    header = struct.pack(
+        "<4sI4s4sIHHIIHH4sI",
+        b"RIFF",          # ChunkID
+        chunk_size,       # ChunkSize (total file size - 8 bytes)
+        b"WAVE",          # Format
+        b"fmt ",          # Subchunk1ID
+        16,               # Subchunk1Size (16 for PCM)
+        1,                # AudioFormat (1 for PCM)
+        num_channels,     # NumChannels
+        sample_rate,      # SampleRate
+        byte_rate,        # ByteRate
+        block_align,      # BlockAlign
+        bits_per_sample,  # BitsPerSample
+        b"data",          # Subchunk2ID
+        data_size         # Subchunk2Size (size of audio data)
+    )
+    return header + audio_data
+
+def parse_audio_mime_type(mime_type: str) -> dict[str, int | None]:
+    """Parses bits per sample and rate from an audio MIME type string.
+
+    Assumes bits per sample is encoded like "L16" and rate as "rate=xxxxx".
+
+    Args:
+        mime_type: The audio MIME type string (e.g., "audio/L16;rate=24000").
+
+    Returns:
+        A dictionary with "bits_per_sample" and "rate" keys. Values will be
+        integers if found, otherwise None.
+    """
+    bits_per_sample = 16
+    rate = 24000
+
+    # Extract rate from parameters
+    parts = mime_type.split(";")
+    for param in parts: # Skip the main type part
+        param = param.strip()
+        if param.lower().startswith("rate="):
+            try:
+                rate_str = param.split("=", 1)[1]
+                rate = int(rate_str)
+            except (ValueError, IndexError):
+                # Handle cases like "rate=" with no value or non-integer value
+                pass # Keep rate as default
+        elif param.startswith("audio/L"):
+            try:
+                bits_per_sample = int(param.split("L", 1)[1])
+            except (ValueError, IndexError):
+                pass # Keep bits_per_sample as default if conversion fails
+
+    return {"bits_per_sample": bits_per_sample, "rate": rate}
+
+
+
+
+def gemini_text_to_speech(text_path,language,voice_gender):
+    from ai_staff.models import AdaptiveSystemPrompt
+    client = genai.Client(api_key = GOOGLE_GEMINI_API)
+    with open(text_path,'r') as fp:
+        text = fp.read()
+    print(text)
+
+    voice_name = "Achernar" if voice_gender== "FEMALE" else "Achird"
+    
+    voice_prompt = AdaptiveSystemPrompt.objects.get(task_name="text_to_speech").prompt.format(language_name=language)
+    print(voice_prompt)
+    print("-------")
+    print(voice_gender)
+    model = "gemini-2.5-flash-preview-tts"
+
+    contents = [ types.Content(role="user",parts=[types.Part.from_text(text=text)])]
+
+    generate_content_config = types.GenerateContentConfig(temperature=1,
+        response_modalities=["audio"],
+        speech_config=types.SpeechConfig(
+            voice_config=types.VoiceConfig(
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name))))
+    
+     
+    for chunk in client.models.generate_content_stream(model=model,contents=contents, config=generate_content_config):
+ 
+        if ( chunk.candidates is None or chunk.candidates[0].content is None or chunk.candidates[0].content.parts is None ):
+            continue
+        if chunk.candidates[0].content.parts[0].inline_data and chunk.candidates[0].content.parts[0].inline_data.data:
+ 
+            inline_data = chunk.candidates[0].content.parts[0].inline_data
+            data_buffer = inline_data.data
+ 
+            data_buffer = convert_to_wav(inline_data.data, inline_data.mime_type)
+ 
+            return data_buffer
+             
+        else:
+            return None

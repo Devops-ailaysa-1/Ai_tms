@@ -2138,7 +2138,8 @@ class MinistryTranslateName(models.Model):
         ]
 
 class PIBSystemLanguagePrompts(models.Model):
-    language = models.ForeignKey(Languages, on_delete=models.CASCADE, related_name='pib_language')
+    language = models.ForeignKey(Languages, on_delete=models.CASCADE, related_name='pib_language',null=True, blank=True)
+    language_name = models.CharField(max_length=100)
     system_prompt = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

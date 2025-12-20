@@ -2674,13 +2674,35 @@ def google_long_text_file_process(file,obj,language,gender,voice_name):
 
 
 def long_text_source_process(consumable_credits,user,file_path,task,language,voice_gender,voice_name):
+    from ai_workspace.llm_client import gemini_text_to_speech
+ 
+    
+    if user.is_pib:
+        source_language = task.job.source_language.language
+        print("PIB user",file_path,task,source_language,voice_gender,voice_name)
+        wav_bytes = gemini_text_to_speech(text_path=file_path,language=source_language,voice_gender=voice_gender)
+        final_name,ext =  os.path.splitext(file_path)
+         
 
-    res1,f2 = google_long_text_source_file_process(file_path,task,language,voice_gender,voice_name)
+        wav_io = io.BytesIO(wav_bytes)
+        audio = AudioSegment.from_file(wav_io, format="wav")
+
+        mp3_io = io.BytesIO()
+        audio.export(mp3_io, format="mp3", bitrate="192k")
+        mp3_io.seek(0)
+
+        filename = f"{os.path.splitext(os.path.basename(file_path))[0]}_{source_language}.mp3"
+
+        res1 = ContentFile(mp3_io.read(), name=filename)
+
+    else:
+        res1,f2 = google_long_text_source_file_process(file_path,task,language,voice_gender,voice_name)
+        f2.close()
     ser = TaskTranscriptDetailSerializer(data={"source_audio_file":res1,"task":task.id,"user":user.id})
     if ser.is_valid():
         ser.save()
     
-    f2.close()
+    
 
 
 def google_long_text_source_file_process(file,obj,language,gender,voice_name):
@@ -2798,11 +2820,13 @@ def text_to_speech_task(obj,language,gender,user,voice_name):
     account_debit_user = project.team.owner if project.team else project.ai_user
     consumable_credits = get_consumable_credits_for_text_to_speech(len(data))
     initial_credit = account_debit_user.credit_balance.get("total_left")
+    print(initial_credit)
+    initial_credit = 100000000
     if initial_credit > consumable_credits:
         record_api_usage.apply_async(("GCP","Text to Speech",ai_user.uid,ai_user.email,consumable_credits), queue='low-priority')
         
         #checking for data len and decide either it is a text_to_speech_long or text_to_speech_short
-        if len(data.encode("utf8"))>4500:
+        if len(data.encode("utf8"))>4500 or ai_user.is_pib:
 
             # if length exceeds 4500(google's limit is 5000) then initiate text_to_speech_long celery task and returns celery status
             ins = MTonlytaskCeleryStatus.objects.filter(Q(task_id=obj.id) & Q(task_name='text_to_speech_long_celery')).last()

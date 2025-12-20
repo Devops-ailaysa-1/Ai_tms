@@ -1744,6 +1744,7 @@ def text_to_html(text: str) -> str:
 @task(queue="high-priority")
 def task_create_and_update_pib_news_detail(task_details_id, json_data, update=False):
     from ai_staff.models import AdaptiveSystemPrompt
+    from ai_workspace.models import PIBSystemLanguagePrompts
 
     task_pib = TaskPibDetails.objects.get(uid=task_details_id)
 
@@ -1753,11 +1754,13 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
         source_language = task_pib.task.job.source_language.language
         target_language = task_pib.task.job.target_language.language
 
+        language_prompt = PIBSystemLanguagePrompts.objects.get(language_name=target_language).system_prompt
+
         #style_prompt = AdaptiveSystemPrompt.objects.get( task_name="translation_pib_style").prompt.format(target_language=target_language)
 
-        stage1_prompt = AdaptiveSystemPrompt.objects.get( task_name="translation_pib_stage_1" ).prompt
+        stage1_prompt = AdaptiveSystemPrompt.objects.get( task_name="translation_pib_stage_1").prompt
 
-        stage2_prompt = AdaptiveSystemPrompt.objects.get(  task_name="translation_pib_stage_2" ).prompt
+        stage2_prompt = AdaptiveSystemPrompt.objects.get(  task_name="translation_pib_stage_2").prompt
 
         # -------- Style Guidance --------
         #style_guidance, _ = llm._handle_nebius( messages=json_data["story"], system_instruction=style_prompt,)
@@ -1771,32 +1774,40 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                 f"Always output ONLY the translation. for media domain and use media terminology with that target language. "
                 f"Do not ask for clarification even if the input is short."
             )
-            short_trans ,_ = llm._handle_nebius( system_instruction=instruction, messages=text) 
+            #short_trans ,_ = llm._handle_nebius( system_instruction=instruction, messages=text) 
+            short_trans ,_ = llm._handle_vertex_ai_pib( system_instruction=instruction, messages=text) 
             return short_trans
 
-        def translate_long(text, prev_text=None): #style_prompt=style_guidance,
-            first_pass, _ = llm._handle_nebius(
-                system_instruction=stage1_prompt.format(source_language=source_language,target_language=target_language,  
-                ),
-                messages=text,
-            )
+        # def translate_long(text, prev_text=None): 
+        #     first_pass, _ = llm._handle_nebius(system_instruction=stage1_prompt.format(source_language=source_language,target_language=target_language),
+        #         messages=text)
+
+        #     refinement_input = (
+        #         f"previous_paragraph: {prev_text}\n\n"
+        #         f"source_text: {text}\n\n"
+        #         f"target_text: {first_pass}"
+        #         if prev_text
+        #         else f"source_text: {text}\n\ntarget_text: {first_pass}"
+        #     )
+
+        #     final_text, _ = llm._handle_nebius(system_instruction=stage2_prompt.format(source_language=source_language,target_language=target_language),
+        #         messages=refinement_input,
+        #     )
+        #     return final_text
+        def translate_long_vertex_pib(text, prev_text=None,prev_translation=None): 
+
 
             refinement_input = (
                 f"previous_paragraph: {prev_text}\n\n"
+                f"previous_paragraph_translation: {prev_translation}\n\n"
                 f"source_text: {text}\n\n"
-                f"target_text: {first_pass}"
+                #f"target_text: {first_pass}"
                 if prev_text
-                else f"source_text: {text}\n\ntarget_text: {first_pass}"
+                else f"source_text: {text}"#\n\ntarget_text: {first_pass}
             )
-
-            final_text, _ = llm._handle_nebius(
-                system_instruction=stage2_prompt.format(
-                    source_language=source_language,
-                    target_language=target_language,
-                ),
-                messages=refinement_input,
-            )
-            return final_text
+            first_pass, _ = llm._handle_vertex_ai_pib(system_instruction= language_prompt,messages=refinement_input)
+ 
+            return first_pass
 
         def translate_paragraphs(paragraphs):
             results = []
@@ -1809,7 +1820,10 @@ def task_create_and_update_pib_news_detail(task_details_id, json_data, update=Fa
                     results.append(translate_short(para))
                 else:
                     prev_para = paragraphs[idx - 1] if idx > 0 else None
-                    results.append(translate_long(para, prev_para))
+                    prev_translation = results[idx - 1] if idx > 0 else None
+                    print("-------->",prev_para)
+                    print("-------->",prev_translation)
+                    results.append(translate_long_vertex_pib(para, prev_para,prev_translation))
             return "".join(f"<p>{p}</p>" for p in results)
 
         # -------- Process JSON --------
