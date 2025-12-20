@@ -213,7 +213,7 @@ def split_dict(single_data):
 
 def split_dict_pib(single_data):
     print(single_data, "single data", type(single_data))
-    trans_keys = ["heading","story"]
+    trans_keys = ["heading","sub_headlines","story",]
     trans_keys_dict = {}
     json_data = single_data
     for key,value in  json_data.items():

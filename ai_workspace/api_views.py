@@ -9,7 +9,7 @@ import zipfile,itertools
 from datetime import datetime
 from glob import glob
 from urllib.parse import urlparse
-from ai_auth.tasks import count_update, mt_raw_update,weighted_count_update
+from ai_auth.tasks import count_update, mt_raw_update, pib_mt_raw_update,weighted_count_update
 import django_filters
 import docx2txt
 import nltk
@@ -5032,7 +5032,7 @@ class PIBStoriesViewSet(viewsets.ModelViewSet):
             if instance_pib_details.pib_story.story_creation_type == PibStoryCreationType.FILE_UPLOAD and pr.pre_translate:
                 # need to add document get DocumentViewByTask api end point here.
                 DocumentViewByTask.create_document_for_task_if_not_exists(task)
-                do_translate = mt_raw_update.apply_async((str(task.id), None))
+                do_translate = pib_mt_raw_update.apply_async((str(task.id),))
                 instance_pib_details.celery_task_id = do_translate.id
                 instance_pib_details.save()
             
